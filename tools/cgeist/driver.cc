@@ -59,7 +59,9 @@
 #include <fstream>
 
 #include "polygeist/Dialect.h"
+#include "sql/SQLDialect.h"
 #include "polygeist/Passes/Passes.h"
+#include "sql/Passes/Passes.h"
 
 #include "ArgumentList.h"
 
@@ -501,6 +503,7 @@ int main(int argc, char **argv) {
   context.getOrLoadDialect<mlir::memref::MemRefDialect>();
   context.getOrLoadDialect<mlir::linalg::LinalgDialect>();
   context.getOrLoadDialect<mlir::polygeist::PolygeistDialect>();
+  context.getOrLoadDialect<mlir::sql::SQLDialect>();
 
   LLVM::LLVMFunctionType::attachInterface<MemRefInsider>(context);
   LLVM::LLVMPointerType::attachInterface<MemRefInsider>(context);

@@ -34,6 +34,7 @@
 
 #include "sql/SQLDialect.h"
 #include "sql/SQLOps.h"
+#include "sql/Passes/Passes.h"
 
 using namespace mlir;
 
@@ -66,6 +67,7 @@ int main(int argc, char **argv) {
   registry.insert<mlir::sql::SQLDialect>();
 
   mlir::registerpolygeistPasses();
+  mlir::registersqlPasses();
 
   // Register the standard passes we want.
   mlir::registerCSEPass();
