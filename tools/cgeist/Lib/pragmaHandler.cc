@@ -70,7 +70,7 @@ public:
   }
 
   /// Handle input(a,b,c), output(x, y, z) optional segment.
-  bool HandleOptionalInputAndOutput(Preprocessor &PP, Token &PragmaTok,
+  bool Handlestd::optionalInputAndOutput(Preprocessor &PP, Token &PragmaTok,
                                     SmallVectorImpl<StringRef> &Inputs,
                                     SmallVectorImpl<StringRef> &Outputs) {
     Token CurrentTok;
@@ -152,7 +152,7 @@ public:
               << "lower_to";
           return;
         } else {
-          if (!HandleOptionalInputAndOutput(PP, CurrentTok, Info.InputSymbol,
+          if (!Handlestd::optionalInputAndOutput(PP, CurrentTok, Info.InputSymbol,
                                             Info.OutputSymbol))
             return;
           else

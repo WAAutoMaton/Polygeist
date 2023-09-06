@@ -2779,7 +2779,7 @@ struct ConvertPolygeistToLLVMPass
       // This converter drops the private memory space to support the use case
       // above.
       if (gpuModule) {
-        converter.addConversion([&](MemRefType type) -> Optional<Type> {
+        converter.addConversion([&](MemRefType type) -> std::optional<Type> {
           if (type.getMemorySpaceAsInt() !=
               gpu::GPUDialect::getPrivateAddressSpace())
             return llvm::None;
@@ -2851,7 +2851,7 @@ struct ConvertPolygeistToLLVMPass
 
       // Legality callback for operations that checks whether their operand and
       // results types are converted.
-      auto areAllTypesConverted = [&](Operation *op) -> Optional<bool> {
+      auto areAllTypesConverted = [&](Operation *op) -> std::optional<bool> {
         SmallVector<Type> convertedResultTypes;
         if (failed(converter.convertTypes(op->getResultTypes(),
                                           convertedResultTypes)))
@@ -2888,13 +2888,13 @@ struct ConvertPolygeistToLLVMPass
       target.addDynamicallyLegalDialect<LLVM::LLVMDialect>(
           areAllTypesConverted);
       target.addDynamicallyLegalOp<LLVM::GlobalOp>(
-          [&](LLVM::GlobalOp op) -> Optional<bool> {
+          [&](LLVM::GlobalOp op) -> std::optional<bool> {
             if (converter.convertType(op.getGlobalType()) == op.getGlobalType())
               return true;
             return llvm::None;
           });
       target.addDynamicallyLegalOp<LLVM::ReturnOp>(
-          [&](LLVM::ReturnOp op) -> Optional<bool> {
+          [&](LLVM::ReturnOp op) -> std::optional<bool> {
             // Outside global ops, defer to the normal type-based check. Note
             // that the infrastructure will not do it automatically because
             // per-op checks override dialect-level checks unconditionally.

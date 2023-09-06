@@ -86,7 +86,7 @@ private:
   void getDependentDialects(DialectRegistry &registry) const override;
 
   // Loads LLVM bitcode libraries
-  Optional<SmallVector<std::unique_ptr<llvm::Module>, 3>>
+  std::optional<SmallVector<std::unique_ptr<llvm::Module>, 3>>
   loadLibraries(SmallVectorImpl<char> &path,
                 SmallVectorImpl<StringRef> &libraries,
                 llvm::LLVMContext &context);
@@ -323,7 +323,7 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
   if (needOckl)
     libraries.push_back("ockl.bc");
 
-  Optional<SmallVector<std::unique_ptr<llvm::Module>, 3>> mbModules;
+  std::optional<SmallVector<std::unique_ptr<llvm::Module>, 3>> mbModules;
   std::string theRocmPath = rocmPath;
   llvm::SmallString<32> bitcodePath(theRocmPath);
   llvm::sys::path::append(bitcodePath, "amdgcn", "bitcode");
@@ -499,7 +499,7 @@ SerializeToHsacoPass::serializeISA(const std::string &isa) {
   return createHsaco(*isaBinary);
 }
 
-Optional<SmallVector<std::unique_ptr<llvm::Module>, 3>>
+std::optional<SmallVector<std::unique_ptr<llvm::Module>, 3>>
 SerializeToHsacoPass::loadLibraries(SmallVectorImpl<char> &path,
                                     SmallVectorImpl<StringRef> &libraries,
                                     llvm::LLVMContext &context) {

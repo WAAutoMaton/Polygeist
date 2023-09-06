@@ -24,7 +24,6 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "polygeist/Ops.h"
 #include "polygeist/Passes/Passes.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -324,7 +323,7 @@ LogicalResult mlir::polygeist::scfParallelUnrollByFactor(
       builder.create<arith::ConstantIndexOp>(loc, unrollFactor);
   Value upperBoundUnrolled = nullptr;
   Value remUnrolled = nullptr;
-  llvm::Optional<int64_t> remUnrolledCst = {};
+  std::optional<int64_t> remUnrolledCst = {};
 
   auto lbCstOp =
       pop.getLowerBound()[dim].getDefiningOp<arith::ConstantIndexOp>();
