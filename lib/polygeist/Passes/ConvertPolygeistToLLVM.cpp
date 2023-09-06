@@ -1347,7 +1347,7 @@ static Type convertAndPackFunctionResultType(FunctionType type,
 /// converted type and the signature conversion object that can be used to
 /// update the arguments of the function's entry block.
 template <typename FuncOpType>
-static Optional<
+static std::optional<
     std::pair<LLVM::LLVMFunctionType, TypeConverter::SignatureConversion>>
 convertFunctionType(FuncOpType funcOp, const TypeConverter &typeConverter) {
   TypeConverter::SignatureConversion signatureConversion(
@@ -1760,7 +1760,7 @@ struct LowerGPUAlternativesOp
       static int num = 0;
       auto kernelId = LLVM::createGlobalString(
           loc, rewriter, std::string("kernelId.") + std::to_string(num++),
-          locStr, LLVM::Linkage::Interna, /*opaquePointers*/ truel);
+          locStr, LLVM::Linkage::Internal, /*opaquePointers*/ true);
       auto totalAlternatives = rewriter.create<LLVM::ConstantOp>(
           loc, llvmInt32Type, gao->getNumRegions());
       auto alternative =
@@ -2367,7 +2367,7 @@ public:
     SmallVector<NamedAttribute> attributes;
     for (const auto &attr : gpuFuncOp->getAttrs()) {
       if (attr.getName() == SymbolTable::getSymbolAttrName() ||
-          attr.getName() == FunctionOpInterface::getTypeAttrName() ||
+          attr.getName() == gpuFuncOp.getFunctionTypeAttrName() ||
           attr.getName() ==
               gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName())
         continue;
@@ -2729,7 +2729,7 @@ struct ConvertPolygeistToLLVMPass
     // requested.
     LLVMTypeConverter converter(&getContext(), options, &dataLayoutAnalysis);
     if (useCStyleMemRef) {
-      converter.addConversion([&](MemRefType type) -> Optional<Type> {
+      converter.addConversion([&](MemRefType type) -> std::optional<Type> {
         Type converted = converter.convertType(type.getElementType());
         if (!converted)
           return Type();
