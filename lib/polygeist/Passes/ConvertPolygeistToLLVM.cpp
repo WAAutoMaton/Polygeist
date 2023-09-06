@@ -512,7 +512,7 @@ struct LLVMOpLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    TypeConverter *converter = getTypeConverter();
+    const TypeConverter *converter = getTypeConverter();
     SmallVector<Type> convertedResultTypes;
     if (failed(converter->convertTypes(op->getResultTypes(),
                                        convertedResultTypes))) {
@@ -659,7 +659,7 @@ struct AsyncOpLowering : public ConvertOpToLLVMPattern<async::ExecuteOp> {
     }
 
     // Collect types for the outlined function inputs and outputs.
-    TypeConverter *converter = getTypeConverter();
+    const TypeConverter *converter = getTypeConverter();
     auto typesRange = llvm::map_range(functionInputs, [&](Value value) {
       return converter->convertType(value.getType());
     });
@@ -789,7 +789,7 @@ struct AsyncOpLowering : public ConvertOpToLLVMPattern<async::ExecuteOp> {
             loc, rewriter.getI64Type(),
             rewriter.create<polygeist::TypeSizeOp>(loc, rewriter.getIndexType(),
                                                    ST));
-        auto mallocFunc = LLVM::lookupOrCreateMallocFn(module, getIndexType());
+        auto mallocFunc = LLVM::lookupOrCreateMallocFn(module, getIndexType(), /*opaquePointers=*/ true);
         mlir::Value alloc =
             rewriter.create<LLVM::CallOp>(loc, mallocFunc, arg).getResult();
         alloc = rewriter.create<LLVM::BitcastOp>(
@@ -842,7 +842,7 @@ struct GlobalOpTypeConversion : public OpConversionPattern<LLVM::GlobalOp> {
   LogicalResult
   matchAndRewrite(LLVM::GlobalOp op, LLVM::GlobalOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    TypeConverter *converter = getTypeConverter();
+    const TypeConverter *converter = getTypeConverter();
     Type globalType = adaptor.getGlobalType();
     Type convertedType = converter->convertType(globalType);
     if (!convertedType)
@@ -865,7 +865,7 @@ struct GetFuncOpConversion : public OpConversionPattern<polygeist::GetFuncOp> {
   matchAndRewrite(polygeist::GetFuncOp op,
                   polygeist::GetFuncOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    TypeConverter *converter = getTypeConverter();
+    const TypeConverter *converter = getTypeConverter();
     Type retType = op.getType();
 
     Type convertedType = converter->convertType(retType);
@@ -923,7 +923,8 @@ protected:
     if (!adaptor.getDynamicSizes().empty())
       return adaptor.getDynamicSizes().front();
 
-    return this->createIndexConstant(rewriter, original->getLoc(),
+    Type indexType = rewriter.getIndexType();
+    return this->createIndexAttrConstant(rewriter, original->getLoc(), indexType,
                                      original.getType().getRank() == 0
                                          ? 1
                                          : original.getType().getDimSize(0));
@@ -982,7 +983,7 @@ public:
       for (int64_t size : originalType.getShape().drop_front())
         innerSizes *= size;
       totalSize = rewriter.createOrFold<LLVM::MulOp>(
-          loc, outerSize, createIndexConstant(rewriter, loc, innerSizes));
+          loc, outerSize, createIndexAttrConstant(rewriter, loc, rewriter.getIndexType(), innerSizes));
     }
     Value null = rewriter.create<LLVM::NullOp>(loc, convertedType);
     auto next =
@@ -999,8 +1000,8 @@ public:
     } else {
       LLVM::LLVMFuncOp mallocFunc =
           getTypeConverter()->getOptions().useGenericFunctions
-              ? LLVM::lookupOrCreateGenericAllocFn(module, getIndexType())
-              : LLVM::lookupOrCreateMallocFn(module, getIndexType());
+              ? LLVM::lookupOrCreateGenericAllocFn(module, getIndexType(), /*opaquePointers=*/ true)
+              : LLVM::lookupOrCreateMallocFn(module, getIndexType(), /*opaquePointers=*/ true);
       Value allocated =
           rewriter.create<LLVM::CallOp>(loc, mallocFunc, size).getResult();
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(allocOp, convertedType,
@@ -1027,8 +1028,8 @@ public:
     } else {
       LLVM::LLVMFuncOp freeFunc =
           getTypeConverter()->getOptions().useGenericFunctions
-              ? LLVM::lookupOrCreateGenericFreeFn(module)
-              : LLVM::lookupOrCreateFreeFn(module);
+              ? LLVM::lookupOrCreateGenericFreeFn(module, /*opaquePointers*/ true)
+              : LLVM::lookupOrCreateFreeFn(module, /*opaquePointers*/ true);
       Value casted = rewriter.create<LLVM::BitcastOp>(
           deallocOp->getLoc(), getVoidPtrType(), adaptor.getMemref());
       rewriter.replaceOpWithNewOp<LLVM::CallOp>(deallocOp, freeFunc, casted);
@@ -1041,7 +1042,7 @@ public:
 /// global. The memref type must have all dimensions statically known. The
 /// provided type converter is used to convert the elemental type.
 static Type convertGlobalMemRefTypeToLLVM(MemRefType type,
-                                          TypeConverter &typeConverter) {
+                                          const TypeConverter &typeConverter) {
   if (!type.hasStaticShape() || !type.getLayout().isIdentity())
     return nullptr;
 
@@ -1261,7 +1262,7 @@ static constexpr llvm::StringLiteral kLLVMLinkageAttrName = "llvm.linkage";
 /// convention of packing multiple values returned from a function into an
 /// anonymous struct. Adapted from upstream MLIR.
 static SmallVector<NamedAttribute> convertFuncAttributes(
-    func::FuncOp funcOp, TypeConverter &typeConverter,
+    func::FuncOp funcOp, const TypeConverter &typeConverter,
     const TypeConverter::SignatureConversion &signatureConversion,
     OpBuilder &rewriter) {
   // Propagate argument/result attributes to all converted arguments/result
@@ -1337,7 +1338,7 @@ static SmallVector<NamedAttribute> convertFuncAttributes(
 /// type that has the same results as the given type. If multiple results are to
 /// be returned, packs them into an anonymous LLVM dialect structure type.
 static Type convertAndPackFunctionResultType(FunctionType type,
-                                             TypeConverter &typeConverter) {
+                                             const TypeConverter &typeConverter) {
   SmallVector<Type> convertedResultTypes;
   if (failed(
           typeConverter.convertTypes(type.getResults(), convertedResultTypes)))
@@ -1358,7 +1359,7 @@ static Type convertAndPackFunctionResultType(FunctionType type,
 template <typename FuncOpType>
 static Optional<
     std::pair<LLVM::LLVMFunctionType, TypeConverter::SignatureConversion>>
-convertFunctionType(FuncOpType funcOp, TypeConverter &typeConverter) {
+convertFunctionType(FuncOpType funcOp, const TypeConverter &typeConverter) {
   TypeConverter::SignatureConversion signatureConversion(
       funcOp.getNumArguments());
   for (const auto &[index, type] : llvm::enumerate(funcOp.getArgumentTypes())) {
@@ -1769,7 +1770,7 @@ struct LowerGPUAlternativesOp
       static int num = 0;
       auto kernelId = LLVM::createGlobalString(
           loc, rewriter, std::string("kernelId.") + std::to_string(num++),
-          locStr, LLVM::Linkage::Internal);
+          locStr, LLVM::Linkage::Interna, /*opaquePointers*/ truel);
       auto totalAlternatives = rewriter.create<LLVM::ConstantOp>(
           loc, llvmInt32Type, gao->getNumRegions());
       auto alternative =
@@ -1943,7 +1944,7 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateKernelNameConstant(
       std::string(llvm::formatv("{0}_{1}_kernel_name", moduleName, name));
   return LLVM::createGlobalString(
       loc, builder, globalName, StringRef(kernelName.data(), kernelName.size()),
-      LLVM::Linkage::Internal);
+      LLVM::Linkage::Internal, /*opaquePointers*/ true);
 }
 
 // Returns whether all operands are of LLVM type.
@@ -2123,7 +2124,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
         // data.setSectionAttr(moduleBuilder.getStringAttr(fatbinSectionName));
         Value data = LLVM::createGlobalString(
             loc, globalBuilder, nameBuffer.str(), binaryAttr.getValue(),
-            LLVM::Linkage::Internal);
+            LLVM::Linkage::Internal, /*opaquePointers*/ true);
         constructedStruct = globalBuilder.create<LLVM::InsertValueOp>(
             loc, fatBinWrapperType, constructedStruct, data,
             globalBuilder.getDenseI64ArrayAttr(i++));
@@ -2200,7 +2201,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
 
             return LLVM::createGlobalString(
                 loc, ctorBuilder, globalName,
-                StringRef(sname.data(), sname.size()), LLVM::Linkage::Internal);
+                StringRef(sname.data(), sname.size()), LLVM::Linkage::Internal, /*opaquePointers*/ true);
           }();
           // TODO could this be a memref global op?
           auto stub = moduleOp.lookupSymbol<LLVM::GlobalOp>(g.getName());
