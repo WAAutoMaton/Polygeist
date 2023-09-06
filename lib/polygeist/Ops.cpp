@@ -1227,19 +1227,16 @@ struct SimplifySubViewUsers : public OpRewritePattern<memref::SubViewOp> {
     bool changed = false;
     int64_t offs = -1;
     for (auto tup :
-         llvm::zip(subindex.static_offsets(), subindex.static_sizes(),
-                   subindex.static_strides())) {
-      auto sz = std::get<1>(tup).dyn_cast<IntegerAttr>().getValue();
+         llvm::zip(subindex.getStaticOffsets(), subindex.getStaticSizes(),
+                   subindex.getStaticStrides())) {
+      auto sz = std::get<1>(tup);
 
-      auto stride = std::get<2>(tup).dyn_cast<IntegerAttr>().getValue();
+      auto stride = std::get<2>(tup);
       if (stride != 1)
         return failure();
 
       if (offs == -1) {
-        offs = std::get<0>(tup)
-                   .dyn_cast<IntegerAttr>()
-                   .getValue()
-                   .getLimitedValue();
+        offs = std::get<0>(tup);
         if (sz != 1)
           return failure();
       }
