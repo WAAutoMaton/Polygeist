@@ -298,7 +298,7 @@ struct Pointer2MemrefOpLowering
     auto result = getStridesAndOffset(op.getType(), strides, offset);
     (void)result;
     assert(succeeded(result) && "unexpected failure in stride computation");
-    assert(offset != ShapedType::kDynamicStrideOrOffset &&
+    assert(offset != ShapedType::kDynamic &&
            "expected static offset");
 
     bool first = true;
@@ -307,7 +307,7 @@ struct Pointer2MemrefOpLowering
         first = false;
         return false;
       }
-      return stride == ShapedType::kDynamicStrideOrOffset;
+      return stride == ShapedType::kDynamic;
     }) && "expected static strides except first element");
 
     descr.setAllocatedPtr(rewriter, loc, ptr);
@@ -1169,8 +1169,7 @@ protected:
 
     SmallVector<LLVM::GEPArg> args = llvm::to_vector(llvm::map_range(
         adaptor.getIndices(), [](Value v) { return LLVM::GEPArg(v); }));
-    return rewriter.create<LLVM::GEPOp>(
-        loc, this->getElementPtrType(originalType), adaptor.getMemref(), args);
+    return rewriter.create<LLVM::GEPOp>(loc, this->getElementPtrType(originalType), convertedType, adaptor.getMemref(), args);
   }
 };
 
@@ -1186,7 +1185,7 @@ public:
     if (!address)
       return failure();
 
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, address);
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, typeConverter->convertType(loadOp.getMemRefType().getElementType()), address);
     return success();
   }
 };
@@ -1204,7 +1203,7 @@ struct CAtomicRMWOpLowering : public CLoadStoreOpLowering<memref::AtomicRMWOp> {
     if (!dataPtr)
       return failure();
     rewriter.replaceOpWithNewOp<LLVM::AtomicRMWOp>(
-        atomicOp, atomicOp.getType(), *maybeKind, dataPtr, adaptor.getValue(),
+        atomicOp, *maybeKind, dataPtr, adaptor.getValue(),
         LLVM::AtomicOrdering::acq_rel);
     return success();
   }
@@ -2351,7 +2350,7 @@ public:
       auto globalOp = rewriter.create<LLVM::GlobalOp>(
           gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
           LLVM::Linkage::Internal, name, /*value=*/Attribute(),
-          /*alignment=*/0, gpu::GPUDialect::getWorkgroupAddressSpace());
+          /*alignment=*/0, static_cast<unsigned>(gpu::GPUDialect::getWorkgroupAddressSpace()));
       workgroupBuffers.push_back(globalOp);
     }
 
@@ -2724,6 +2723,7 @@ struct ConvertPolygeistToLLVMPass
       options.overrideIndexBitwidth(indexBitwidth);
 
     options.dataLayout = llvm::DataLayout(this->dataLayout);
+    options.useOpaquePointers = false;
 
     // Define the type converter. Override the default behavior for memrefs if
     // requested.
@@ -2781,8 +2781,8 @@ struct ConvertPolygeistToLLVMPass
       if (gpuModule) {
         converter.addConversion([&](MemRefType type) -> std::optional<Type> {
           if (type.getMemorySpaceAsInt() !=
-              gpu::GPUDialect::getPrivateAddressSpace())
-            return {};
+              static_cast<unsigned>(gpu::GPUDialect::getPrivateAddressSpace()))
+            return std::nullopt;
           return converter.convertType(MemRefType::Builder(type).setMemorySpace(
               IntegerAttr::get(IntegerType::get(m.getContext(), 64), 0)));
         });
@@ -2817,7 +2817,7 @@ struct ConvertPolygeistToLLVMPass
         populateCStyleMemRefLoweringPatterns(patterns, converter);
         populateCStyleFuncLoweringPatterns(patterns, converter);
       } else {
-        populateMemRefToLLVMConversionPatterns(converter, patterns);
+        populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
         populateFuncToLLVMConversionPatterns(converter, patterns);
       }
       if (gpuModule) {
@@ -2855,11 +2855,11 @@ struct ConvertPolygeistToLLVMPass
         SmallVector<Type> convertedResultTypes;
         if (failed(converter.convertTypes(op->getResultTypes(),
                                           convertedResultTypes)))
-          return {};
+          return std::nullopt;
         SmallVector<Type> convertedOperandTypes;
         if (failed(converter.convertTypes(op->getOperandTypes(),
                                           convertedOperandTypes)))
-          return {};
+          return std::nullopt;
         return convertedResultTypes == op->getResultTypes() &&
                convertedOperandTypes == op->getOperandTypes();
       };
@@ -2891,7 +2891,7 @@ struct ConvertPolygeistToLLVMPass
           [&](LLVM::GlobalOp op) -> std::optional<bool> {
             if (converter.convertType(op.getGlobalType()) == op.getGlobalType())
               return true;
-            return {};
+            return std::nullopt;
           });
       target.addDynamicallyLegalOp<LLVM::ReturnOp>(
           [&](LLVM::ReturnOp op) -> std::optional<bool> {
@@ -2904,7 +2904,7 @@ struct ConvertPolygeistToLLVMPass
             SmallVector<Type> convertedOperandTypes;
             if (failed(converter.convertTypes(op->getOperandTypes(),
                                               convertedOperandTypes)))
-              return {};
+              return std::nullopt;
             return convertedOperandTypes == op->getOperandTypes();
           });
       /*

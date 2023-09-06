@@ -58,10 +58,12 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Support/LLVMDriver.h"
+#include "llvm/TargetParser/Host.h"
+#include <fstream>
 
 #include "polygeist/Dialect.h"
 #include "polygeist/Passes/Passes.h"
@@ -292,7 +294,8 @@ extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
 extern int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0,
                       void *MainAddr);
 extern int cc1gen_reproducer_main(ArrayRef<const char *> Argv,
-                                  const char *Argv0, void *MainAddr);
+                                  const char *Argv0, void *MainAddr,
+                                  const llvm::ToolContext &ToolContext);
 std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
   if (!CanonicalPrefixes) {
     SmallString<128> ExecutablePath(Argv0);
@@ -310,7 +313,8 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
   return llvm::sys::fs::getMainExecutable(Argv0, P);
 }
 
-static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
+static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
+                          const llvm::ToolContext &ToolContext) {
   // If we call the cc1 tool from the clangDriver library (through
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
@@ -329,7 +333,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
                       GetExecutablePathVP);
   if (Tool == "-cc1gen-reproducer")
     return cc1gen_reproducer_main(makeArrayRef(ArgV).slice(2), ArgV[0],
-                                  GetExecutablePathVP);
+                                  GetExecutablePathVP, ToolContext);
   // Reject unknown tools.
   llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
                << "Valid tools include '-cc1' and '-cc1as'.\n";
@@ -441,7 +445,7 @@ int main(int argc, char **argv) {
       SmallVector<const char *> Argv;
       for (int i = 0; i < argc; i++)
         Argv.push_back(argv[i]);
-      return ExecuteCC1Tool(Argv);
+      return ExecuteCC1Tool(Argv, {});
     }
   }
   SmallVector<const char *> LinkageArgs;
@@ -515,7 +519,7 @@ int main(int argc, char **argv) {
   MLIRContext context(registry);
 
   context.disableMultithreading();
-  context.getOrLoadDialect<AffineDialect>();
+  context.getOrLoadDialect<affine::AffineDialect>();
   context.getOrLoadDialect<func::FuncDialect>();
   context.getOrLoadDialect<DLTIDialect>();
   context.getOrLoadDialect<mlir::scf::SCFDialect>();
@@ -638,7 +642,7 @@ int main(int argc, char **argv) {
     optPM.addPass(polygeist::replaceAffineCFGPass());
     optPM.addPass(mlir::createCanonicalizerPass(canonicalizerConfig, {}, {}));
     if (ScalarReplacement)
-      optPM.addPass(mlir::createAffineScalarReplacementPass());
+      optPM.addPass(mlir::affine::createAffineScalarReplacementPass());
     addLICM(optPM);
     optPM.addPass(mlir::createCanonicalizerPass(canonicalizerConfig, {}, {}));
     optPM.addPass(polygeist::createCanonicalizeForPass());
@@ -650,7 +654,7 @@ int main(int argc, char **argv) {
       optPM.addPass(polygeist::createRaiseSCFToAffinePass());
       optPM.addPass(polygeist::replaceAffineCFGPass());
       if (ScalarReplacement)
-        optPM.addPass(mlir::createAffineScalarReplacementPass());
+        optPM.addPass(mlir::affine::createAffineScalarReplacementPass());
     }
     if (mlir::failed(pm.run(module.get()))) {
       module->dump();
@@ -755,7 +759,7 @@ int main(int argc, char **argv) {
         noptPM2.addPass(
             mlir::createCanonicalizerPass(canonicalizerConfig, {}, {}));
         if (LoopUnroll)
-          noptPM2.addPass(mlir::createLoopUnrollPass(unrollSize, false, true));
+          noptPM2.addPass(mlir::affine::createLoopUnrollPass(unrollSize, false, true));
         noptPM2.addPass(
             mlir::createCanonicalizerPass(canonicalizerConfig, {}, {}));
         noptPM2.addPass(mlir::createCSEPass());
@@ -770,7 +774,7 @@ int main(int argc, char **argv) {
         noptPM2.addPass(
             mlir::createCanonicalizerPass(canonicalizerConfig, {}, {}));
         if (ScalarReplacement)
-          noptPM2.addPass(mlir::createAffineScalarReplacementPass());
+          noptPM2.addPass(mlir::affine::createAffineScalarReplacementPass());
       }
       if (mlir::failed(pm.run(module.get()))) {
         module->dump();
@@ -803,7 +807,7 @@ int main(int argc, char **argv) {
         optPM.addPass(
             mlir::createCanonicalizerPass(canonicalizerConfig, {}, {}));
         if (ScalarReplacement)
-          optPM.addPass(mlir::createAffineScalarReplacementPass());
+          optPM.addPass(mlir::affine::createAffineScalarReplacementPass());
       }
       if (ToCPU == "continuation") {
         optPM.addPass(polygeist::createBarrierRemovalContinuation());
@@ -833,7 +837,7 @@ int main(int argc, char **argv) {
         optPM.addPass(
             mlir::createCanonicalizerPass(canonicalizerConfig, {}, {}));
         if (LoopUnroll)
-          optPM.addPass(mlir::createLoopUnrollPass(unrollSize, false, true));
+          optPM.addPass(mlir::affine::createLoopUnrollPass(unrollSize, false, true));
         optPM.addPass(
             mlir::createCanonicalizerPass(canonicalizerConfig, {}, {}));
         optPM.addPass(mlir::createCSEPass());
@@ -848,7 +852,7 @@ int main(int argc, char **argv) {
         optPM.addPass(
             mlir::createCanonicalizerPass(canonicalizerConfig, {}, {}));
         if (ScalarReplacement)
-          optPM.addPass(mlir::createAffineScalarReplacementPass());
+          optPM.addPass(mlir::affine::createAffineScalarReplacementPass());
       }
     }
     pm.addPass(mlir::createSymbolDCEPass());
@@ -1145,10 +1149,10 @@ int main(int argc, char **argv) {
     }
     if (auto F = llvmModule->getFunction("malloc")) {
       // allocsize
-      for (auto Attr : {llvm::Attribute::InaccessibleMemOnly,
-                        llvm::Attribute::MustProgress, llvm::Attribute::NoFree,
+      for (auto Attr : {llvm::Attribute::MustProgress, llvm::Attribute::NoFree,
                         llvm::Attribute::NoUnwind, llvm::Attribute::WillReturn})
         F->addFnAttr(Attr);
+      F->setOnlyAccessesInaccessibleMemory();
       F->addRetAttr(llvm::Attribute::NoAlias);
       F->addRetAttr(llvm::Attribute::NoUndef);
       SmallVector<llvm::Value *> todo = {F};

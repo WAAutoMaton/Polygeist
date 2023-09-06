@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
 
   // Register MLIR stuff
-  registry.insert<mlir::AffineDialect>();
+  registry.insert<mlir::affine::AffineDialect>();
   registry.insert<mlir::LLVM::LLVMDialect>();
   registry.insert<mlir::memref::MemRefDialect>();
   registry.insert<mlir::async::AsyncDialect>();
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
   mlir::registerSymbolDCEPass();
   mlir::registerLoopInvariantCodeMotionPass();
   mlir::registerConvertSCFToOpenMPPass();
-  mlir::registerAffinePasses();
+  mlir::affine::registerAffinePasses();
 
   registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
     LLVM::LLVMFunctionType::attachInterface<MemRefInsider>(*ctx);
@@ -106,6 +106,5 @@ int main(int argc, char **argv) {
   });
 
   return mlir::failed(mlir::MlirOptMain(
-      argc, argv, "Polygeist modular optimizer driver", registry,
-      /*preloadDialectsInContext=*/true));
+      argc, argv, "Polygeist modular optimizer driver", registry));
 }

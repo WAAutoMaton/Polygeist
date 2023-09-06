@@ -1528,7 +1528,7 @@ public:
     auto omt = op.getType().cast<MemRefType>();
     if (smt.getShape().size() != omt.getShape().size())
       return failure();
-    for (int i = 1; i < smt.getShape().size(); i++) {
+    for (unsigned i = 1; i < smt.getShape().size(); i++) {
       if (smt.getShape()[i] != omt.getShape()[i])
         return failure();
     }
