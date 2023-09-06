@@ -509,7 +509,7 @@ SerializeToHsacoPass::loadLibraries(SmallVectorImpl<char> &path,
   if (!llvm::sys::fs::is_directory(path)) {
     getOperation().emitRemark() << "Bitcode path: " << path
                                 << " does not exist or is not a directory\n";
-    return llvm::None;
+    return {};
   }
 
   for (const StringRef file : libraries) {
@@ -522,7 +522,7 @@ SerializeToHsacoPass::loadLibraries(SmallVectorImpl<char> &path,
     if (!library) {
       getOperation().emitError() << "Failed to load library " << file
                                  << " from " << path << error.getMessage();
-      return llvm::None;
+      return {};
     }
     // Some ROCM builds don't strip this like they should
     if (auto *openclVersion = library->getNamedMetadata("opencl.ocl.version"))

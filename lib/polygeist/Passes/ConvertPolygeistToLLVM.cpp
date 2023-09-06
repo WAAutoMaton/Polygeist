@@ -2782,7 +2782,7 @@ struct ConvertPolygeistToLLVMPass
         converter.addConversion([&](MemRefType type) -> std::optional<Type> {
           if (type.getMemorySpaceAsInt() !=
               gpu::GPUDialect::getPrivateAddressSpace())
-            return llvm::None;
+            return {};
           return converter.convertType(MemRefType::Builder(type).setMemorySpace(
               IntegerAttr::get(IntegerType::get(m.getContext(), 64), 0)));
         });
@@ -2855,11 +2855,11 @@ struct ConvertPolygeistToLLVMPass
         SmallVector<Type> convertedResultTypes;
         if (failed(converter.convertTypes(op->getResultTypes(),
                                           convertedResultTypes)))
-          return llvm::None;
+          return {};
         SmallVector<Type> convertedOperandTypes;
         if (failed(converter.convertTypes(op->getOperandTypes(),
                                           convertedOperandTypes)))
-          return llvm::None;
+          return {};
         return convertedResultTypes == op->getResultTypes() &&
                convertedOperandTypes == op->getOperandTypes();
       };
@@ -2891,7 +2891,7 @@ struct ConvertPolygeistToLLVMPass
           [&](LLVM::GlobalOp op) -> std::optional<bool> {
             if (converter.convertType(op.getGlobalType()) == op.getGlobalType())
               return true;
-            return llvm::None;
+            return {};
           });
       target.addDynamicallyLegalOp<LLVM::ReturnOp>(
           [&](LLVM::ReturnOp op) -> std::optional<bool> {
@@ -2904,7 +2904,7 @@ struct ConvertPolygeistToLLVMPass
             SmallVector<Type> convertedOperandTypes;
             if (failed(converter.convertTypes(op->getOperandTypes(),
                                               convertedOperandTypes)))
-              return llvm::None;
+              return {};
             return convertedOperandTypes == op->getOperandTypes();
           });
       /*
