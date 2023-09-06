@@ -1099,7 +1099,7 @@ public:
     auto newGlobal = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         globalOp, convertedType, globalOp.getConstant(), globalOp.getSymName(),
         linkage, dso_local, thread_local_, initialValue, alignment,
-        originalType.getMemorySpaceAsInt(), unnamed_addr, section);
+        originalType.getMemorySpaceAsInt(), unnamed_addr, section, /*comdat=*/nullptr);
     if (!globalOp.isExternal() && globalOp.isUninitialized()) {
       Block *block =
           rewriter.createBlock(&newGlobal.getInitializerRegion(),
@@ -2380,7 +2380,7 @@ public:
     auto llvmFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
         gpuFuncOp.getLoc(), gpuFuncOp.getName(), funcType,
         LLVM::Linkage::External, /*dsoLocal*/ false, /*cconv*/ LLVM::CConv::C,
-        attributes);
+        /*comdat=*/nullptr, attributes);
 
     {
       // Insert operations that correspond to converted workgroup and private
@@ -2556,7 +2556,7 @@ public:
     }
     auto newFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
         funcOp.getLoc(), funcOp.getName(), convertedType, linkage,
-        /*dsoLocal=*/false, /*cconv=*/LLVM::CConv::C, attributes);
+        /*dsoLocal=*/false, /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr, attributes);
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
     if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), *typeConverter,
