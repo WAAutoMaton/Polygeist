@@ -28,7 +28,9 @@
 #include "polygeist/Passes/Passes.h"
 #include "polygeist/Passes/Utils.h"
 
+#include <cmath>
 #include <deque>
+#include <set>
 
 #define DEBUG_TYPE "cpuify"
 #define DBGS() ::llvm::dbgs() << "[" DEBUG_TYPE "] "
@@ -472,11 +474,11 @@ struct NormalizeLoop : public OpRewritePattern<scf::ForOp> {
 static bool isNormalized(scf::ParallelOp op) {
   auto isZero = [](Value v) {
     APInt value;
-    return matchPattern(v, m_ConstantInt(&value)) && value.isNullValue();
+    return matchPattern(v, m_ConstantInt(&value)) && value.isZero();
   };
   auto isOne = [](Value v) {
     APInt value;
-    return matchPattern(v, m_ConstantInt(&value)) && value.isOneValue();
+    return matchPattern(v, m_ConstantInt(&value)) && value.isOne();
   };
   return llvm::all_of(op.getLowerBound(), isZero) &&
          llvm::all_of(op.getStep(), isOne);
