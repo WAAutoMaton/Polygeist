@@ -25,8 +25,9 @@
 #include "llvm/Support/GenericLoopInfoImpl.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
-
 #include "llvm/Support/Debug.h"
+#include "polygeist/Dialect.h"
+
 #define DEBUG_TYPE "LoopRestructure"
 
 using namespace mlir;

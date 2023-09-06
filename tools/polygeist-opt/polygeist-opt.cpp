@@ -57,6 +57,8 @@ int main(int argc, char **argv) {
   registry.insert<mlir::NVVM::NVVMDialect>();
   registry.insert<mlir::omp::OpenMPDialect>();
   registry.insert<mlir::math::MathDialect>();
+  registry.insert<mlir::cf::ControlFlowDialect>();
+  registry.insert<mlir::polygeist::PolygeistDialect>();
   registry.insert<DLTIDialect>();
 
   registry.insert<mlir::polygeist::PolygeistDialect>();

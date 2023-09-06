@@ -69,10 +69,10 @@ def ConvertCudaRTtoHipRT : Pass<"convert-cudart-to-gpu", "mlir::ModuleOp"> {
 def ParallelLower : Pass<"parallel-lower", "mlir::ModuleOp"> {
   let summary = "Lower gpu launch op to parallel ops";
   let dependentDialects = [
+    "cf::ControlFlowDialect",
     "memref::MemRefDialect",
     "func::FuncDialect",
     "LLVM::LLVMDialect",
-    "cf::ControlFlowDialect",
   ];
   let constructor = "mlir::polygeist::createParallelLowerPass()";
 }
@@ -178,6 +178,7 @@ def LoopRestructure : Pass<"loop-restructure"> {
   let constructor = "mlir::polygeist::createLoopRestructurePass()";
   let dependentDialects = [
     "scf::SCFDialect",
+    "polygeist::PolygeistDialect",
   ];
 }
 
