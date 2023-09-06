@@ -35,7 +35,6 @@ add_mlir_dialect_library(MLIRPolygeistTransforms
   MLIRAffineUtils
   MLIRFuncDialect
   MLIRFuncTransforms
-  MLIRGPUOps
   MLIRGPUToGPURuntimeTransforms
   MLIRGPUTransforms
   MLIRGPUToNVVMTransforms

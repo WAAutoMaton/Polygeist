@@ -16,7 +16,6 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.td"
 
 def UndefOp
     : Polygeist_Op<"undef", [Pure]> {

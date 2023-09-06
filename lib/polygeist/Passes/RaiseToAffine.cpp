@@ -187,7 +187,7 @@ struct ParallelOpRaising : public OpRewritePattern<scf::ParallelOp> {
   using OpRewritePattern<scf::ParallelOp>::OpRewritePattern;
 
   void canonicalizeLoopBounds(PatternRewriter &rewriter,
-                              AffineParallelOp forOp) const {
+                              affine::AffineParallelOp forOp) const {
     SmallVector<Value, 4> lbOperands(forOp.getLowerBoundsOperands());
     SmallVector<Value, 4> ubOperands(forOp.getUpperBoundsOperands());
 
@@ -235,7 +235,7 @@ struct ParallelOpRaising : public OpRewritePattern<scf::ParallelOp> {
       bounds.push_back(AffineMap::get(
           /*dimCount=*/0, /*symbolCount=*/loop.getLowerBound().size(),
           builder.getAffineSymbolExpr(i)));
-    AffineParallelOp affineLoop = rewriter.create<AffineParallelOp>(
+    affine::AffineParallelOp affineLoop = rewriter.create<affine::AffineParallelOp>(
         loop.getLoc(), loop.getResultTypes(), reductions, bounds,
         loop.getLowerBound(), bounds, loop.getUpperBound(),
         steps); //, loop.getInitVals());

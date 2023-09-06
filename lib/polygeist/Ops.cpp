@@ -440,7 +440,7 @@ bool getEffectsBefore(Operation *op,
 
   bool conservative = false;
 
-  if (isa<scf::ParallelOp, AffineParallelOp>(op->getParentOp()))
+  if (isa<scf::ParallelOp, affine::AffineParallelOp>(op->getParentOp()))
     return true;
 
   // As we didn't hit another barrier, we must check the predecessors of this
@@ -480,7 +480,7 @@ bool getEffectsAfter(Operation *op,
 
   bool conservative = false;
 
-  if (isa<scf::ParallelOp, AffineParallelOp>(op->getParentOp()))
+  if (isa<scf::ParallelOp, affine::AffineParallelOp>(op->getParentOp()))
     return true;
 
   // As we didn't hit another barrier, we must check the predecessors of this
@@ -2238,7 +2238,7 @@ struct MoveIntoIfs : public OpRewritePattern<scf::IfOp> {
     // If this is used in an affine if/for/parallel op, do not move it, as it
     // may no longer be a legal symbol
     for (OpOperand &use : prevOp->getUses()) {
-      if (isa<AffineForOp, AffineIfOp, AffineParallelOp>(use.getOwner()))
+      if (isa<AffineForOp, AffineIfOp, affine::AffineParallelOp>(use.getOwner()))
         return failure();
     }
 
@@ -3202,8 +3202,8 @@ bool valueCmp(Cmp cmp, Value bval, ValueOrInt val) {
       }
       }
     }
-    if (AffineParallelOp afFor =
-            dyn_cast<AffineParallelOp>(baval.getOwner()->getParentOp())) {
+    if (affine::AffineParallelOp afFor =
+            dyn_cast<affine::AffineParallelOp>(baval.getOwner()->getParentOp())) {
       switch (cmp) {
       // \forall i \in [max(LB...), min(UB...)) == k   => all(LB == k) and
       // all(UB == k+1)
@@ -3483,8 +3483,8 @@ bool rangeIncludes(Value bval, ValueOrInt lb, ValueOrInt ub) {
                  afFor.getUpperBoundOperands(), ub);
     }
     //  \forall i in [max(LB...),  min(UB)...] is a superset of [lb, ub)
-    if (AffineParallelOp afFor =
-            dyn_cast<AffineParallelOp>(baval.getOwner()->getParentOp())) {
+    if (affine::AffineParallelOp afFor =
+            dyn_cast<affine::AffineParallelOp>(baval.getOwner()->getParentOp())) {
       for (auto flb : afFor.getLowerBoundMap(baval.getArgNumber()).getResults())
         if (!valueCmp(Cmp::LE, flb, afFor.getLowerBoundsMap().getNumDims(),
                       afFor.getLowerBoundsOperands(), lb))
@@ -3546,7 +3546,7 @@ struct AffineIfSinking : public OpRewritePattern<AffineIfOp> {
       return failure();
     if (op.hasElse())
       return failure();
-    auto par = dyn_cast<AffineParallelOp>(op->getParentOp());
+    auto par = dyn_cast<affine::AffineParallelOp>(op->getParentOp());
     if (!par)
       return failure();
 
@@ -3784,8 +3784,8 @@ struct AffineIfSimplification : public OpRewritePattern<AffineIfOp> {
         //// expr -1 >= 0    => expr > 0
         if (!op.getIntegerSet().isEq(cst.index())) {
           auto expr = cst.value() + 1;
-          for (auto paren = op->getParentOfType<AffineParallelOp>(); paren;
-               paren = paren->getParentOfType<AffineParallelOp>()) {
+          for (auto paren = op->getParentOfType<affine::AffineParallelOp>(); paren;
+               paren = paren->getParentOfType<affine::AffineParallelOp>()) {
             if (canRemove)
               break;
             for (auto tup : llvm::enumerate(paren.getSteps())) {
@@ -4009,16 +4009,16 @@ struct CombineAffineIfs : public OpRewritePattern<AffineIfOp> {
 };
 
 struct MergeNestedAffineParallelLoops
-    : public OpRewritePattern<AffineParallelOp> {
-  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
+    : public OpRewritePattern<affine::AffineParallelOp> {
+  using OpRewritePattern<affine::AffineParallelOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(AffineParallelOp op,
+  LogicalResult matchAndRewrite(affine::AffineParallelOp op,
                                 PatternRewriter &rewriter) const override {
     Block &outerBody = op.getLoopBody().front();
     if (!llvm::hasSingleElement(outerBody.without_terminator()))
       return failure();
 
-    auto innerOp = dyn_cast<AffineParallelOp>(outerBody.front());
+    auto innerOp = dyn_cast<affine::AffineParallelOp>(outerBody.front());
     if (!innerOp)
       return failure();
 
@@ -4113,7 +4113,7 @@ struct MergeNestedAffineParallelLoops
     for (auto U : innerOp.getSteps())
       steps.push_back(U);
 
-    AffineParallelOp affineLoop = rewriter.create<AffineParallelOp>(
+    affine::AffineParallelOp affineLoop = rewriter.create<affine::AffineParallelOp>(
         op.getLoc(), newTypes, rewriter.getArrayAttr(reductions),
         AffineMapAttr::get(
             AffineMap::get(op.getLowerBoundsMap().getNumDims() +
@@ -4146,16 +4146,16 @@ struct MergeNestedAffineParallelLoops
 };
 
 struct PrepMergeNestedAffineParallelLoops
-    : public OpRewritePattern<AffineParallelOp> {
-  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
+    : public OpRewritePattern<affine::AffineParallelOp> {
+  using OpRewritePattern<affine::AffineParallelOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(AffineParallelOp oop,
+  LogicalResult matchAndRewrite(affine::AffineParallelOp oop,
                                 PatternRewriter &rewriter) const override {
     Block &outerBody = oop.getLoopBody().front();
-    AffineParallelOp innerOp = nullptr;
+    affine::AffineParallelOp innerOp = nullptr;
     SmallVector<Operation *> toMove;
     for (auto &op : outerBody) {
-      if (auto innerOp2 = dyn_cast<AffineParallelOp>(&op)) {
+      if (auto innerOp2 = dyn_cast<affine::AffineParallelOp>(&op)) {
         if (innerOp)
           return failure();
         if (!isa<AffineYieldOp>(innerOp2->getNextNode())) {
@@ -4186,10 +4186,10 @@ struct PrepMergeNestedAffineParallelLoops
   }
 };
 
-struct MergeNestedAffineParallelIf : public OpRewritePattern<AffineParallelOp> {
-  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
+struct MergeNestedAffineParallelIf : public OpRewritePattern<affine::AffineParallelOp> {
+  using OpRewritePattern<affine::AffineParallelOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(AffineParallelOp op,
+  LogicalResult matchAndRewrite(affine::AffineParallelOp op,
                                 PatternRewriter &rewriter) const override {
     Block &outerBody = op.getLoopBody().front();
 
@@ -4410,7 +4410,7 @@ struct MergeNestedAffineParallelIf : public OpRewritePattern<AffineParallelOp> {
 
     ArrayRef<Attribute> reductions;
 
-    AffineParallelOp affineLoop = rewriter.create<AffineParallelOp>(
+    affine::AffineParallelOp affineLoop = rewriter.create<affine::AffineParallelOp>(
         op.getLoc(), op.getResultTypes(), rewriter.getArrayAttr(reductions),
         AffineMapAttr::get(AffineMap::get(
             op.getLowerBoundsMap().getNumDims(),
@@ -4459,10 +4459,10 @@ struct MergeNestedAffineParallelIf : public OpRewritePattern<AffineParallelOp> {
   }
 };
 
-struct MergeParallelInductions : public OpRewritePattern<AffineParallelOp> {
-  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
+struct MergeParallelInductions : public OpRewritePattern<affine::AffineParallelOp> {
+  using OpRewritePattern<affine::AffineParallelOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(AffineParallelOp op,
+  LogicalResult matchAndRewrite(affine::AffineParallelOp op,
                                 PatternRewriter &rewriter) const override {
     // Reductions are not supported yet.
     if (!op.getReductions().empty())
@@ -4767,7 +4767,7 @@ struct MergeParallelInductions : public OpRewritePattern<AffineParallelOp> {
             ubounds[off1] = ubounds[off1] * ubounds[off2];
             ubounds[off2] = getAffineConstantExpr(1, op.getContext());
 
-            AffineParallelOp affineLoop = rewriter.create<AffineParallelOp>(
+            affine::AffineParallelOp affineLoop = rewriter.create<affine::AffineParallelOp>(
                 op.getLoc(), op.getResultTypes(), op.getReductionsAttr(),
                 op.getLowerBoundsMapAttr(), op.getLowerBoundsGroupsAttr(),
                 AffineMapAttr::get(
@@ -4789,10 +4789,10 @@ struct MergeParallelInductions : public OpRewritePattern<AffineParallelOp> {
 };
 
 struct RemoveAffineParallelSingleIter
-    : public OpRewritePattern<AffineParallelOp> {
-  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
+    : public OpRewritePattern<affine::AffineParallelOp> {
+  using OpRewritePattern<affine::AffineParallelOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(AffineParallelOp op,
+  LogicalResult matchAndRewrite(affine::AffineParallelOp op,
                                 PatternRewriter &rewriter) const override {
 
     // Reductions are not supported yet.
@@ -4879,7 +4879,7 @@ struct RemoveAffineParallelSingleIter
       rewriter.replaceOp(op, toRet);
     } else {
 
-      AffineParallelOp affineLoop = rewriter.create<AffineParallelOp>(
+      affine::AffineParallelOp affineLoop = rewriter.create<affine::AffineParallelOp>(
           op.getLoc(), op.getResultTypes(), rewriter.getArrayAttr(reductions),
           AffineMapAttr::get(
               AffineMap::get(op.getLowerBoundsMap().getNumDims(),
@@ -5333,7 +5333,7 @@ struct AffineBufferElimination : public OpRewritePattern<T> {
           for (auto iv : fOp.getInductionVars())
             if (!rangeIncludes(iv, 0, 1))
               return failure();
-        } else if (auto fOp = dyn_cast<AffineParallelOp>(parent)) {
+        } else if (auto fOp = dyn_cast<affine::AffineParallelOp>(parent)) {
           if (BA.getArgNumber() >= fOp.getIVs().size())
             return failure();
           for (auto iv : fOp.getIVs())
@@ -5374,7 +5374,7 @@ struct AffineBufferElimination : public OpRewritePattern<T> {
             for (auto iv : fOp.getInductionVars())
               if (!rangeIncludes(iv, 0, 1))
                 return failure();
-          } else if (auto fOp = dyn_cast<AffineParallelOp>(cur)) {
+          } else if (auto fOp = dyn_cast<affine::AffineParallelOp>(cur)) {
             for (auto iv : fOp.getIVs())
               if (!rangeIncludes(iv, 0, 1))
                 return failure();
@@ -5396,7 +5396,7 @@ struct AffineBufferElimination : public OpRewritePattern<T> {
         auto V = VI.v_val;
         auto BA = V.dyn_cast<BlockArgument>();
         Operation *c = BA.getOwner()->getParentOp();
-        if (isa<AffineParallelOp>(c) || isa<scf::ParallelOp>(c)) {
+        if (isa<affine::AffineParallelOp>(c) || isa<scf::ParallelOp>(c)) {
           Operation *tmp = store;
           bool found = false;
           while (true) {
@@ -5457,7 +5457,7 @@ struct AffineBufferElimination : public OpRewritePattern<T> {
                 } else if (auto fOp = dyn_cast<scf::ParallelOp>(parent)) {
                   if (BA.getArgNumber() >= fOp.getInductionVars().size())
                     return false;
-                } else if (auto fOp = dyn_cast<AffineParallelOp>(parent)) {
+                } else if (auto fOp = dyn_cast<affine::AffineParallelOp>(parent)) {
                   if (BA.getArgNumber() >= fOp.getIVs().size())
                     return false;
                 } else {

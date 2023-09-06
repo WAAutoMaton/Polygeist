@@ -255,8 +255,8 @@ bool below(Value bval, int64_t val) {
       }
       return true;
     }
-    if (AffineParallelOp afFor =
-            dyn_cast<AffineParallelOp>(baval.getOwner()->getParentOp())) {
+    if (affine::AffineParallelOp afFor =
+            dyn_cast<affine::AffineParallelOp>(baval.getOwner()->getParentOp())) {
       for (auto ub :
            afFor.getUpperBoundMap(baval.getArgNumber()).getResults()) {
         if (!below(ub, afFor.getUpperBoundsMap().getNumDims(),
@@ -420,7 +420,7 @@ void moveParallelLoopInvariantCode(scf::ParallelOp looplike) {
 }
 
 // TODO affine parallel licm
-void moveParallelLoopInvariantCode(AffineParallelOp looplike) {
+void moveParallelLoopInvariantCode(affine::AffineParallelOp looplike) {
 
   // We use two collections here as we need to preserve the order for insertion
   // and this is easiest.
@@ -697,7 +697,7 @@ void ParallelLICM::runOnOperation() {
     moveLoopInvariantCode(loopLike);
     if (auto par = dyn_cast<scf::ParallelOp>((Operation *)loopLike)) {
       moveParallelLoopInvariantCode(par);
-    } else if (auto par = dyn_cast<AffineParallelOp>((Operation *)loopLike)) {
+    } else if (auto par = dyn_cast<affine::AffineParallelOp>((Operation *)loopLike)) {
       moveParallelLoopInvariantCode(par);
     } else if (auto par = dyn_cast<scf::ForOp>((Operation *)loopLike)) {
       moveSerialLoopInvariantCode(par);

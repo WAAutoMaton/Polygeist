@@ -117,7 +117,7 @@ static bool isAffineForArg(Value val) {
   if (!val.isa<BlockArgument>())
     return false;
   Operation *parentOp = val.cast<BlockArgument>().getOwner()->getParentOp();
-  return (isa_and_nonnull<AffineForOp, AffineParallelOp>(parentOp));
+  return (isa_and_nonnull<AffineForOp, affine::AffineParallelOp>(parentOp));
 }
 
 static bool legalCondition(Value en, bool dim = false) {
@@ -144,7 +144,7 @@ static bool legalCondition(Value en, bool dim = false) {
   //}
   if (!dim)
     if (auto BA = en.dyn_cast<BlockArgument>()) {
-      if (isa<AffineForOp, AffineParallelOp>(BA.getOwner()->getParentOp()))
+      if (isa<AffineForOp, affine::AffineParallelOp>(BA.getOwner()->getParentOp()))
         return true;
     }
   return false;
@@ -1022,7 +1022,7 @@ bool isValidIndex(Value val) {
       return af.getInductionVar() == ba;
 
     // TODO ensure not a reduced var
-    if (isa<AffineParallelOp>(parentOp))
+    if (isa<affine::AffineParallelOp>(parentOp))
       return true;
 
     if (isa<FunctionOpInterface>(parentOp))
@@ -1484,7 +1484,7 @@ struct MoveIfToAffine : public OpRewritePattern<scf::IfOp> {
   LogicalResult matchAndRewrite(scf::IfOp ifOp,
                                 PatternRewriter &rewriter) const override {
     if (!ifOp->getParentOfType<AffineForOp>() &&
-        !ifOp->getParentOfType<AffineParallelOp>())
+        !ifOp->getParentOfType<affine::AffineParallelOp>())
       return failure();
 
     std::vector<mlir::Type> types;

@@ -136,7 +136,7 @@ static void getIndVars(Operation *op, SmallPtrSet<Value, 3> &indVars) {
     for (auto var : pop.getInductionVars())
       indVars.insert(var);
   else
-    for (auto var : cast<AffineParallelOp>(op).getBody()->getArguments())
+    for (auto var : cast<affine::AffineParallelOp>(op).getBody()->getArguments())
       indVars.insert(var);
 }
 
@@ -306,7 +306,7 @@ static void minCutCache(polygeist::BarrierOp barrier,
 }
 
 bool isParallelOp(Operation *op) {
-  return isa<scf::ParallelOp, AffineParallelOp>(op);
+  return isa<scf::ParallelOp, affine::AffineParallelOp>(op);
 }
 
 bool isIfOp(Operation *op) { return isa<scf::IfOp, AffineIfOp>(op); }
@@ -397,7 +397,7 @@ static bool hasNestedBarrier(Operation *op, SmallVector<BlockArgument> &vals) {
                 dyn_cast<scf::ParallelOp>(ba.getOwner()->getParentOp())) {
           if (parallel->isAncestor(op))
             vals.push_back(ba);
-        } else if (auto parallel = dyn_cast<AffineParallelOp>(
+        } else if (auto parallel = dyn_cast<affine::AffineParallelOp>(
                        ba.getOwner()->getParentOp())) {
           if (parallel->isAncestor(op))
             vals.push_back(ba);
@@ -430,7 +430,7 @@ struct NormalizeLoop : public OpRewritePattern<scf::ForOp> {
 
   LogicalResult matchAndRewrite(scf::ForOp op,
                                 PatternRewriter &rewriter) const override {
-    if (isNormalized(op) || !isa<scf::ParallelOp, AffineParallelOp>(op->getParentOp())) {
+    if (isNormalized(op) || !isa<scf::ParallelOp, affine::AffineParallelOp>(op->getParentOp())) {
       LLVM_DEBUG(DBGS() << "[normalize-loop] loop already normalized\n");
       return failure();
     }
@@ -481,7 +481,7 @@ static bool isNormalized(scf::ParallelOp op) {
   return llvm::all_of(op.getLowerBound(), isZero) &&
          llvm::all_of(op.getStep(), isOne);
 }
-static bool isNormalized(AffineParallelOp op) {
+static bool isNormalized(affine::AffineParallelOp op) {
   auto isZero = [](AffineExpr v) {
     if (auto ce = v.dyn_cast<AffineConstantExpr>())
       return ce.getValue() == 0;
@@ -597,11 +597,11 @@ LogicalResult splitSubLoop(scf::ParallelOp op, PatternRewriter &rewriter,
   return success();
 }
 
-LogicalResult splitSubLoop(AffineParallelOp op, PatternRewriter &rewriter,
+LogicalResult splitSubLoop(affine::AffineParallelOp op, PatternRewriter &rewriter,
                            BarrierOp barrier, SmallVector<Value> &iterCounts,
-                           AffineParallelOp &preLoop,
-                           AffineParallelOp &postLoop, Block *&outerBlock,
-                           AffineParallelOp &outerLoop,
+                           affine::AffineParallelOp &preLoop,
+                           affine::AffineParallelOp &postLoop, Block *&outerBlock,
+                           affine::AffineParallelOp &outerLoop,
                            memref::AllocaScopeOp &outerEx) {
 
   SmallVector<AffineMap> outerLower;
@@ -631,7 +631,7 @@ LogicalResult splitSubLoop(AffineParallelOp op, PatternRewriter &rewriter,
   if (!innerLower.size())
     return failure();
   if (outerLower.size()) {
-    outerLoop = rewriter.create<AffineParallelOp>(
+    outerLoop = rewriter.create<affine::AffineParallelOp>(
         op.getLoc(), TypeRange(), ArrayRef<AtomicRMWKind>(), outerLower,
         op.getLowerBoundsOperands(), outerUpper, op.getUpperBoundsOperands(),
         outerStep);
@@ -676,12 +676,12 @@ LogicalResult splitSubLoop(AffineParallelOp op, PatternRewriter &rewriter,
     iterCounts.push_back(rewriter.create<AffineApplyOp>(
         op.getLoc(), AffineMap::get(dims.size(), symbols.size(), expr), ops));
   }
-  preLoop = rewriter.create<AffineParallelOp>(
+  preLoop = rewriter.create<affine::AffineParallelOp>(
       op.getLoc(), TypeRange(), ArrayRef<AtomicRMWKind>(), innerLower,
       op.getLowerBoundsOperands(), innerUpper, op.getUpperBoundsOperands(),
       innerStep);
   rewriter.eraseOp(&preLoop.getBody()->back());
-  postLoop = rewriter.create<AffineParallelOp>(
+  postLoop = rewriter.create<affine::AffineParallelOp>(
       op.getLoc(), TypeRange(), ArrayRef<AtomicRMWKind>(), innerLower,
       op.getLowerBoundsOperands(), innerUpper, op.getUpperBoundsOperands(),
       innerStep);
@@ -935,7 +935,7 @@ static LogicalResult distributeAroundBarrier(T op, BarrierOp barrier,
     if (isa<scf::ParallelOp>(outerLoop))
       rewriter.create<scf::YieldOp>(op.getLoc());
     else {
-      assert(isa<AffineParallelOp>(outerLoop));
+      assert(isa<affine::AffineParallelOp>(outerLoop));
       rewriter.create<AffineYieldOp>(op.getLoc());
     }
   } else {
@@ -1007,7 +1007,7 @@ struct DistributeAroundBarrier : public OpRewritePattern<T> {
 /// necessary but insufficient condition.
 static LogicalResult canWrapWithBarriers(Operation *op,
                                          SmallVector<BlockArgument> &vals) {
-  if (!isa<scf::ParallelOp, AffineParallelOp>(op->getParentOp())) {
+  if (!isa<scf::ParallelOp, affine::AffineParallelOp>(op->getParentOp())) {
     LLVM_DEBUG(DBGS() << "[wrap] not nested in a pfor\n");
     return failure();
   }
@@ -1125,17 +1125,17 @@ static LogicalResult wrapAndDistribute(T op, bool singleExecution,
     Operation *postPop = nullptr;
     (void)distributeAfterWrap<scf::ParallelOp, UseMinCut>(pop, before, rewriter,
                                                           &postPop);
-    (void)distributeAfterWrap<AffineParallelOp, UseMinCut>(pop, before,
+    (void)distributeAfterWrap<affine::AffineParallelOp, UseMinCut>(pop, before,
                                                            rewriter, &postPop);
     after = getFirstBarrier(postPop->getBlock());
     (void)distributeAfterWrap<scf::ParallelOp, UseMinCut>(
         dyn_cast_or_null<scf::ParallelOp>(postPop), after, rewriter);
-    (void)distributeAfterWrap<AffineParallelOp, UseMinCut>(
-        dyn_cast_or_null<AffineParallelOp>(postPop), after, rewriter);
+    (void)distributeAfterWrap<affine::AffineParallelOp, UseMinCut>(
+        dyn_cast_or_null<affine::AffineParallelOp>(postPop), after, rewriter);
   } else {
     // We only have a barrier after the op
     (void)distributeAfterWrap<scf::ParallelOp, UseMinCut>(pop, after, rewriter);
-    (void)distributeAfterWrap<AffineParallelOp, UseMinCut>(pop, after,
+    (void)distributeAfterWrap<affine::AffineParallelOp, UseMinCut>(pop, after,
                                                            rewriter);
   }
 
@@ -1291,7 +1291,7 @@ mlir::OperandRange getLowerBounds(scf::ParallelOp op,
                                   PatternRewriter &rewriter) {
   return op.getLowerBound();
 }
-SmallVector<Value> getLowerBounds(AffineParallelOp op,
+SmallVector<Value> getLowerBounds(affine::AffineParallelOp op,
                                   PatternRewriter &rewriter) {
   SmallVector<Value> vals;
   for (AffineExpr expr : op.getLowerBoundsMap().getResults()) {
@@ -2191,7 +2191,7 @@ struct Reg2MemFor : public OpRewritePattern<T> {
     if (op.getNumResults() == 0 || !hasNestedBarrier(op, args))
       return failure();
 
-    if (!isa<scf::ParallelOp, AffineParallelOp>(op->getParentOp())) {
+    if (!isa<scf::ParallelOp, affine::AffineParallelOp>(op->getParentOp())) {
       return failure();
     }
 
@@ -2281,7 +2281,7 @@ struct Reg2MemIf : public OpRewritePattern<T> {
     if (!op.getResults().size() || !hasNestedBarrier(op, args))
       return failure();
 
-    if (!isa<scf::ParallelOp, AffineParallelOp>(op->getParentOp())) {
+    if (!isa<scf::ParallelOp, affine::AffineParallelOp>(op->getParentOp())) {
       return failure();
     }
 
@@ -2650,26 +2650,26 @@ struct CPUifyPass : public SCFCPUifyBase<CPUifyPass> {
         WrapForWithBarrier<UseMinCut>, WrapAffineForWithBarrier<UseMinCut>,
         WrapWhileWithBarrier<UseMinCut>,
         InterchangeForIfPFor<scf::ParallelOp, scf::ForOp>,
-        InterchangeForIfPFor<AffineParallelOp, scf::ForOp>,
+        InterchangeForIfPFor<affine::AffineParallelOp, scf::ForOp>,
         InterchangeForIfPFor<scf::ParallelOp, AffineForOp>,
-        InterchangeForIfPFor<AffineParallelOp, AffineForOp>,
+        InterchangeForIfPFor<affine::AffineParallelOp, AffineForOp>,
         InterchangeWhilePFor<scf::ParallelOp>,
-        InterchangeWhilePFor<AffineParallelOp>,
+        InterchangeWhilePFor<affine::AffineParallelOp>,
         InterchangeForIfPFor<scf::ParallelOp, scf::IfOp>,
-        InterchangeForIfPFor<AffineParallelOp, scf::IfOp>,
+        InterchangeForIfPFor<affine::AffineParallelOp, scf::IfOp>,
         InterchangeForIfPFor<scf::ParallelOp, AffineIfOp>,
-        InterchangeForIfPFor<AffineParallelOp, AffineIfOp>>(&getContext());
+        InterchangeForIfPFor<affine::AffineParallelOp, AffineIfOp>>(&getContext());
     if (method.contains("ifhoist")) {
       patterns.insert<HoistBarrierIf<scf::ParallelOp, scf::IfOp>,
                       HoistBarrierIf<scf::ParallelOp, AffineIfOp>,
-                      HoistBarrierIf<AffineParallelOp, scf::IfOp>,
-                      HoistBarrierIf<AffineParallelOp, AffineIfOp>>(
+                      HoistBarrierIf<affine::AffineParallelOp, scf::IfOp>,
+                      HoistBarrierIf<affine::AffineParallelOp, AffineIfOp>>(
           &getContext());
     } else {
       if (method.contains("ifsplit")) {
         patterns.insert<
-            DistributeIfAroundBarrier<scf::IfOp, AffineParallelOp, UseMinCut>,
-            DistributeIfAroundBarrier<AffineIfOp, AffineParallelOp, UseMinCut>,
+            DistributeIfAroundBarrier<scf::IfOp, affine::AffineParallelOp, UseMinCut>,
+            DistributeIfAroundBarrier<AffineIfOp, affine::AffineParallelOp, UseMinCut>,
             DistributeIfAroundBarrier<scf::IfOp, scf::ParallelOp, UseMinCut>,
             DistributeIfAroundBarrier<AffineIfOp, scf::ParallelOp, UseMinCut>>(
             &getContext());
@@ -2684,7 +2684,7 @@ struct CPUifyPass : public SCFCPUifyBase<CPUifyPass> {
         // RotateWhile,
 
         DistributeAroundBarrier<scf::ParallelOp, UseMinCut>,
-        DistributeAroundBarrier<AffineParallelOp, UseMinCut>>(&getContext());
+        DistributeAroundBarrier<affine::AffineParallelOp, UseMinCut>>(&getContext());
   }
   CPUifyPass() = default;
   CPUifyPass(StringRef method) { this->method.setValue(method.str()); }
