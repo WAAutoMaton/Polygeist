@@ -1380,7 +1380,7 @@ struct RemovePolygeistGPUWrapperOp : public OpRewritePattern<OpType> {
     }
     rewriter.eraseOp(wrapper.getBody()->getTerminator());
     rewriter.setInsertionPoint(wrapper);
-    rewriter.mergeBlockBefore(wrapper.getBody(), wrapper);
+    rewriter.inlineBlockBefore(wrapper.getBody(), wrapper);
     rewriter.eraseOp(wrapper);
     return success();
   }
@@ -1507,7 +1507,7 @@ struct ParallelToGPULaunch : public OpRewritePattern<polygeist::GPUWrapperOp> {
     auto errOp = rewriter.create<polygeist::GPUErrorOp>(loc);
     rewriter.setInsertionPointToStart(errOp.getBody());
     rewriter.eraseOp(wrapper.getBody()->getTerminator());
-    rewriter.mergeBlockBefore(wrapper.getBody(),
+    rewriter.inlineBlockBefore(wrapper.getBody(),
                               errOp.getBody()->getTerminator());
     rewriter.replaceOp(wrapper, errOp->getResults());
 

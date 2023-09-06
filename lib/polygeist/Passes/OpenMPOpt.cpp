@@ -212,7 +212,7 @@ struct ParallelForInterchange : public OpRewritePattern<omp::ParallelOp> {
                                     prevFor.getUpperBound(), prevFor.getStep());
     auto *yield = nextParallel.getRegion().front().getTerminator();
     newFor.getRegion().takeBody(prevFor.getRegion());
-    rewriter.mergeBlockBefore(&nextParallel.getRegion().front(),
+    rewriter.inlineBlockBefore(&nextParallel.getRegion().front(),
                               newFor.getBody()->getTerminator());
     rewriter.setInsertionPoint(newFor.getBody()->getTerminator());
     rewriter.create<omp::BarrierOp>(nextParallel.getLoc());

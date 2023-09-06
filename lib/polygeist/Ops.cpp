@@ -32,6 +32,8 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
 
+#include <set>
+
 #define DEBUG_TYPE "polygeist"
 
 using namespace mlir;
@@ -160,7 +162,7 @@ public:
     }
     auto block = &*aop->getRegions()[0].begin();
     rewriter.eraseOp(block->getTerminator());
-    rewriter.mergeBlockBefore(block, aop);
+    rewriter.inlineBlockBefore(block, aop);
     rewriter.eraseOp(aop);
     return success();
   }
@@ -2778,7 +2780,7 @@ struct AggressiveAllocaScopeInliner
     Block *block = &op.getRegion().front();
     Operation *terminator = block->getTerminator();
     ValueRange results = terminator->getOperands();
-    rewriter.mergeBlockBefore(block, op);
+    rewriter.inlineBlockBefore(block, op);
     rewriter.replaceOp(op, results);
     rewriter.eraseOp(terminator);
     return success();
@@ -3717,7 +3719,7 @@ static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
   Block *block = &region.front();
   Operation *terminator = block->getTerminator();
   ValueRange results = terminator->getOperands();
-  rewriter.mergeBlockBefore(block, op, blockArgs);
+  rewriter.inlineBlockBefore(block, op, blockArgs);
   rewriter.replaceOp(op, results);
   rewriter.eraseOp(terminator);
 }
@@ -4139,7 +4141,7 @@ struct MergeNestedAffineParallelLoops
       post.push_back(
           affineLoop.getBody()->addArgument(v.getType(), v.getLoc()));
     }
-    rewriter.mergeBlockBefore(innerOp.getBody(), yld, post);
+    rewriter.inlineBlockBefore(innerOp.getBody(), yld, post);
     return success();
   }
 };
@@ -4432,7 +4434,7 @@ struct MergeNestedAffineParallelIf : public OpRewritePattern<affine::AffineParal
       auto yld = cast<affine::AffineYieldOp>(innerOp.getThenBlock()->getTerminator());
       SmallVector<Value> toRet(yld.getOperands());
       rewriter.eraseOp(yld);
-      rewriter.mergeBlockBefore(innerOp.getThenBlock(), innerOp);
+      rewriter.inlineBlockBefore(innerOp.getThenBlock(), innerOp);
       rewriter.replaceOp(innerOp, toRet);
     } else {
       affine::AffineIfOp newIf = rewriter.create<affine::AffineIfOp>(
@@ -4874,7 +4876,7 @@ struct RemoveAffineParallelSingleIter
       auto yld = cast<affine::AffineYieldOp>(op.getBody()->getTerminator());
       SmallVector<Value> toRet(yld.getOperands());
       rewriter.eraseOp(yld);
-      rewriter.mergeBlockBefore(op.getBody(), op, replacements);
+      rewriter.inlineBlockBefore(op.getBody(), op, replacements);
       rewriter.replaceOp(op, toRet);
     } else {
 

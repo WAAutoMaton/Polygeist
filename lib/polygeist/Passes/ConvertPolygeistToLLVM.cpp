@@ -1759,7 +1759,7 @@ struct LowerGPUAlternativesOp
         block = &*std::get<0>(infos[0])->begin();
 
       rewriter.eraseOp(block->getTerminator());
-      rewriter.mergeBlockBefore(block, gao);
+      rewriter.inlineBlockBefore(block, gao);
       rewriter.eraseOp(gao);
 
       return success();
@@ -1785,7 +1785,7 @@ struct LowerGPUAlternativesOp
         auto ifOp = rewriter.create<scf::IfOp>(loc, cmpOp, /* hasElse */ true);
         auto block = &region.front();
         rewriter.eraseOp(block->getTerminator());
-        rewriter.mergeBlockBefore(block,
+        rewriter.inlineBlockBefore(block,
                                   ifOp.getThenRegion().front().getTerminator());
 
         // Timing
@@ -1855,7 +1855,7 @@ struct LowerGPUAlternativesOp
       auto block = &*gao->getRegions()[bestAlt].begin();
 
       rewriter.eraseOp(block->getTerminator());
-      rewriter.mergeBlockBefore(block, gao);
+      rewriter.inlineBlockBefore(block, gao);
       rewriter.eraseOp(gao);
 
       return success();
@@ -1997,7 +1997,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
   if ((errOp = dyn_cast<polygeist::GPUErrorOp>(launchOp->getParentOp()))) {
     rewriter.setInsertionPoint(errOp);
     rewriter.eraseOp(errOp.getBody()->getTerminator());
-    rewriter.mergeBlockBefore(errOp.getBody(), errOp);
+    rewriter.inlineBlockBefore(errOp.getBody(), errOp);
   }
 
   // Create an LLVM global with CUBIN extracted from the kernel annotation and
@@ -2310,7 +2310,7 @@ struct ReplaceErrOpWithSuccess
                                 PatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(errOp);
     rewriter.eraseOp(errOp.getBody()->getTerminator());
-    rewriter.mergeBlockBefore(errOp.getBody(), errOp);
+    rewriter.inlineBlockBefore(errOp.getBody(), errOp);
     rewriter.setInsertionPoint(errOp);
     auto zero = rewriter.create<arith::ConstantIndexOp>(errOp->getLoc(), 0);
     rewriter.replaceOp(errOp, zero->getResults());
