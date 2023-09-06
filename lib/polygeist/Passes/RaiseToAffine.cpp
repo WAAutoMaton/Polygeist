@@ -18,6 +18,7 @@
 using namespace mlir;
 using namespace mlir::arith;
 using namespace polygeist;
+using namespace affine;
 
 namespace {
 struct RaiseSCFToAffine : public SCFRaiseToAffineBase<RaiseSCFToAffine> {

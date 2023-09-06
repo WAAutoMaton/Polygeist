@@ -127,7 +127,7 @@ def SCFBarrierRemovalContinuation : InterfacePass<"barrier-removal-continuation"
 def SCFRaiseToAffine : Pass<"raise-scf-to-affine"> {
   let summary = "Raise SCF to affine";
   let constructor = "mlir::polygeist::createRaiseSCFToAffinePass()";
-  let dependentDialects = ["AffineDialect"];
+  let dependentDialects = ["affine::AffineDialect"];
 }
 
 def SCFCanonicalizeFor : Pass<"canonicalize-scf-for"> {
