@@ -266,7 +266,7 @@ static LogicalResult generateUnrolledInterleavedLoop(
 static bool isNormalized(scf::ParallelOp op) {
   auto isZero = [](Value v) {
     APInt value;
-    return matchPattern(v, m_ConstantInt(&value)) && value.isNull();
+    return matchPattern(v, m_ConstantInt(&value)) && value.isZero();
   };
   auto isOne = [](Value v) {
     APInt value;
