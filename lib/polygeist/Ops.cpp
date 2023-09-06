@@ -28,7 +28,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Transforms/SideEffectUtils.h"
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
