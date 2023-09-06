@@ -16,7 +16,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
@@ -53,12 +53,12 @@ static LogicalResult generateUnrolledInterleavedLoop(
   BlockArgument srcIV = srcBlock->getArgument(dim);
   BlockArgument dstIV = dstBlock->getArgument(dim);
 
-  BlockAndValueMapping barrierBlockArgMap;
+  IRMapping barrierBlockArgMap;
   for (unsigned j = 0; j < srcBlock->getNumArguments(); j++)
     barrierBlockArgMap.map(srcBlock->getArgument(j), dstBlock->getArgument(j));
-  SmallVector<BlockAndValueMapping, 32> operandMap;
+  SmallVector<IRMapping, 32> operandMap;
   for (unsigned i = 0; i < unrollFactor; i++) {
-    operandMap.emplace_back(BlockAndValueMapping());
+    operandMap.emplace_back(IRMapping());
     for (unsigned j = 0; j < srcBlock->getNumArguments(); j++)
       operandMap[i].map(srcBlock->getArgument(j), dstBlock->getArgument(j));
     // If the induction variable is used, create a remapping to the value for

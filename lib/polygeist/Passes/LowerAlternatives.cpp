@@ -129,7 +129,7 @@ struct LowerAlternativesPass
 
         block->getTerminator()->erase();
         OpBuilder builder(aop);
-        BlockAndValueMapping mapping;
+        IRMapping mapping;
         for (auto &op : *block) {
           builder.clone(op, mapping);
         }

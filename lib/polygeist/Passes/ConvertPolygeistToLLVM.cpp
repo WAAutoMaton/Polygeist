@@ -40,7 +40,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -684,7 +684,7 @@ struct AsyncOpLowering : public ConvertOpToLLVMPattern<async::ExecuteOp> {
     }
 
     rewriter.setInsertionPointToStart(func.addEntryBlock());
-    BlockAndValueMapping valueMapping;
+    IRMapping valueMapping;
     for (Value capture : toErase) {
       Operation *op = capture.getDefiningOp();
       for (auto r :

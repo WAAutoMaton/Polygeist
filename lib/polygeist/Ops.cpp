@@ -25,7 +25,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Transforms/SideEffectUtils.h"
@@ -202,7 +202,7 @@ public:
     std::vector<Attribute> configs;
     unsigned curRegion = 0;
     for (; curRegion < innerAop->getNumRegions(); curRegion++) {
-      BlockAndValueMapping mapping;
+      IRMapping mapping;
       auto block = &*newAop->getRegion(curRegion).begin();
       rewriter.setInsertionPointToStart(block);
       for (auto &op : *innerAop->getBlock()) {
@@ -229,7 +229,7 @@ public:
       }
       auto block = &*newAop->getRegion(curRegion).begin();
       rewriter.setInsertionPointToStart(block);
-      BlockAndValueMapping mapping;
+      IRMapping mapping;
       for (auto &op : srcRegion.getOps())
         if (!isa<PolygeistYieldOp>(&op))
           rewriter.clone(op, mapping);
@@ -2143,7 +2143,7 @@ struct IfAndLazy : public OpRewritePattern<scf::IfOp> {
 
       {
         SmallVector<Value> elseVals = otherYield.getOperands();
-        BlockAndValueMapping elseMapping;
+        IRMapping elseMapping;
         elseMapping.map(prevIf.getResults(), otherYield.getOperands());
         SmallVector<Value> nextElseVals;
         for (auto v : nextIf.elseYield().getOperands())
@@ -2714,7 +2714,7 @@ struct AlwaysAllocaScopeHoister : public OpRewritePattern<T> {
     if (toHoist.empty())
       return failure();
     rewriter.setInsertionPoint(lastParentWithoutScope);
-    BlockAndValueMapping map;
+    IRMapping map;
     for (auto *op : toHoist) {
       auto *cloned = rewriter.clone(*op, map);
       rewriter.replaceOp(op, cloned->getResults());
@@ -3683,7 +3683,7 @@ struct AffineIfSinking : public OpRewritePattern<AffineIfOp> {
     else
       rewriter.setInsertionPoint(par);
 
-    BlockAndValueMapping map;
+    IRMapping map;
     auto c0 = rewriter.create<ConstantIndexOp>(op.getLoc(), 0);
     for (auto i : par.getIVs()) {
       map.map(i, c0);
@@ -4177,7 +4177,7 @@ struct PrepMergeNestedAffineParallelLoops
       return failure();
     }
 
-    BlockAndValueMapping map;
+    IRMapping map;
     rewriter.setInsertionPointToStart(innerOp.getBody());
     for (auto o : toMove) {
       rewriter.replaceOp(o, rewriter.clone(*o)->getResults());
@@ -5640,7 +5640,7 @@ struct AffineBufferElimination : public OpRewritePattern<T> {
             rewriter.setInsertionPoint(ld);
             Value repval = storeVal;
             if (toRedo.size()) {
-              BlockAndValueMapping map;
+              IRMapping map;
               if (auto ald = dyn_cast<AffineLoadOp>(ld)) {
                 for (size_t i = 0; i < storeIdxs.size(); ++i) {
                   if (storeIdxs[i].isValue) {

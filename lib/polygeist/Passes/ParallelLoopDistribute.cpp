@@ -15,7 +15,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/IntegerSet.h"
@@ -718,7 +718,7 @@ static LogicalResult distributeAroundBarrier(T op, BarrierOp barrier,
                       << "usedBelow: " << usedBelow.size() << ", "
                       << "crossingCache: " << crossingCache.size() << "\n");
 
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     for (auto v : crossingCache)
       mapping.map(v, v);
 
@@ -944,7 +944,7 @@ static LogicalResult distributeAroundBarrier(T op, BarrierOp barrier,
 
   // Recreate the operations in the new loop with new values.
   rewriter.setInsertionPointToStart(postLoop.getBody());
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   mapping.map(preLoop.getBody()->getArguments(),
               postLoop.getBody()->getArguments());
   SmallVector<Operation *> toDelete;
@@ -1210,7 +1210,7 @@ template <typename T, typename T2>
 static void insertRecomputables(PatternRewriter &rewriter, T oldParallel,
                                 T newParallel, T2 until) {
   rewriter.setInsertionPointToStart(newParallel.getBody());
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   mapping.map(oldParallel.getBody()->getArguments(),
               newParallel.getBody()->getArguments());
   rewriter.setInsertionPointToStart(newParallel.getBody());
@@ -1317,7 +1317,7 @@ static void moveBodiesFor(PatternRewriter &rewriter, T op, ForType forLoop,
 
   // Keep recomputable values in the parallel op (explicitly excluding loads
   // that provide for bounds as those are handles in the caller)
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   mapping.map(op.getBody()->getArguments(),
               newParallel.getBody()->getArguments());
   rewriter.setInsertionPointToEnd(newParallel.getBody());
@@ -1424,7 +1424,7 @@ struct InterchangeForIfPFor : public OpRewritePattern<ParallelOpType> {
 
     // Replicate the recomputable ops in case the condition or bound of lastOp
     // is getting "recomputed"
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     rewriter.setInsertionPoint(op);
     mapping.map(op.getBody()->getArguments(), getLowerBounds(op, rewriter));
     rewriter.setInsertionPoint(op);
@@ -1720,7 +1720,7 @@ struct HoistBarrierIf : public OpRewritePattern<IfType> {
     }
     // TODO should check if the barrier args match the parent parallel op args
 
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     rewriter.setInsertionPoint(pop);
     mapping.map(pop.getBody()->getArguments(), getLowerBounds(pop, rewriter));
     rewriter.setInsertionPoint(pop);
@@ -1821,7 +1821,7 @@ void getIfCrossingCache(mlir::PatternRewriter &rewriter, Block *original,
                       << "usedBelow: " << usedBelow.size() << ", "
                       << "crossingCache: " << crossingCache.size() << "\n");
 
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     for (Value v : crossingCache)
       mapping.map(v, v);
 
@@ -1886,7 +1886,7 @@ void distributeBlockAroundBarrier(mlir::PatternRewriter &rewriter,
                                   llvm::SetVector<Value> &crossingCache,
                                   Block *original, Block *pre, Block *post,
                                   BarrierOp barrier, Operation *beforeBlocks,
-                                  BlockAndValueMapping mapping) {
+                                  IRMapping mapping) {
 
   // Remove already created yields if they exist
   clearBlock(pre, rewriter);
@@ -2036,7 +2036,7 @@ struct DistributeIfAroundBarrier : public OpRewritePattern<IfOpType> {
 
     // Hoist the if condition calculation outside the parallel region
     rewriter.setInsertionPoint(pop);
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     mapping.map(pop.getBody()->getArguments(), getLowerBounds(pop, rewriter));
     std::function<void(Value)> recalculateVal;
     bool condRecomputable = true;
@@ -2153,7 +2153,7 @@ struct DistributeIfAroundBarrier : public OpRewritePattern<IfOpType> {
         }
       }
 
-      BlockAndValueMapping mapping;
+      IRMapping mapping;
 
       distributeBlockAroundBarrier(rewriter, preserveAllocas, crossingCache,
                                    block, preBlock, postBlock, barrier, ifPre,
@@ -2412,7 +2412,7 @@ struct Reg2MemIf : public OpRewritePattern<T> {
           assert(storeOp);
           if (equivThenStores.count(storeOp))
             continue;
-          BlockAndValueMapping map;
+          IRMapping map;
           SetVector<Operation *> seen;
           SmallVector<Value> todo = {storeOp.getMemref()};
           for (auto ind : storeOp.getIndices())
@@ -2471,7 +2471,7 @@ struct Reg2MemIf : public OpRewritePattern<T> {
             rewriter.eraseOp(storeOp);
             continue;
           }
-          BlockAndValueMapping map;
+          IRMapping map;
           SetVector<Operation *> seen;
           SmallVector<Value> todo = {storeOp.getMemref()};
           for (auto ind : storeOp.getIndices())

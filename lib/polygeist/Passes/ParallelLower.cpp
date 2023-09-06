@@ -149,13 +149,13 @@ struct AlwaysInlinerInterface : public InlinerInterface {
 
   /// All operations within standard ops can be inlined.
   bool isLegalToInline(Region *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+                       IRMapping &) const final {
     return true;
   }
 
   /// All operations within standard ops can be inlined.
   bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+                       IRMapping &) const final {
     return true;
   }
 
