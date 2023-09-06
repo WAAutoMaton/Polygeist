@@ -2,6 +2,8 @@
 #define POLYGEIST_DIALECT_POLYGEIST_PASSES_H
 
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Pass/Pass.h"
 #include <memory>
 
@@ -81,9 +83,21 @@ namespace arith {
 class ArithDialect;
 } // end namespace arith
 
+namespace omp {
+class OpenMPDialect;
+} // end namespace omp
+
 namespace scf {
 class SCFDialect;
 } // end namespace scf
+
+namespace cf {
+class ControlFlowDialect;
+} // end namespace cf
+
+namespace math {
+class MathDialect;
+} // end namespace math
 
 namespace memref {
 class MemRefDialect;
