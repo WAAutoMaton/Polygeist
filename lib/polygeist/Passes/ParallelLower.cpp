@@ -978,10 +978,10 @@ static void setCallee(func::CallOp call, StringRef symName) {
   call.setCallee(symName);
 }
 static void setCallee(LLVM::CallOp call, StringRef symName) {
-  call.setCallee(llvm::Optional<StringRef>(symName));
+  call.setCallee(symName);
 }
 template <typename CallOpTy, typename FuncOpTy>
-void replaceCallOp(ModuleOp m, CallOpTy call, StringRef callee) {
+void replaceCallOp(ModuleOp m, CallOpTy call, llvm::StringRef callee) {
   auto loc = call->getLoc();
   OpBuilder moduleBuilder = OpBuilder::atBlockEnd(m.getBody());
   OpBuilder callBuilder(call);
@@ -1028,8 +1028,8 @@ void ConvertCudaRTtoHipRT::runOnOperation() {
 }
 
 void ConvertCudaRTtoGPU::runOnOperation() {
-  std::function<void(Operation * call, StringRef callee)> replaceWithOp =
-      [&](Operation *call, StringRef callee) {
+  std::function<void(Operation * call, llvm::StringRef callee)> replaceWithOp =
+      [&](Operation *call, llvm::StringRef callee) {
         auto loc = call->getLoc();
         OpBuilder bz(call);
 
