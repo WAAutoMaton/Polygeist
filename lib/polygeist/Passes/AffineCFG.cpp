@@ -7,7 +7,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -22,6 +21,7 @@
 using namespace mlir;
 using namespace mlir::arith;
 using namespace polygeist;
+using namespace mlir::affine;
 
 bool isReadOnly(Operation *op);
 

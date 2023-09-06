@@ -10,6 +10,7 @@
 
 using namespace mlir;
 using namespace polygeist;
+using namespace mlir::affine;
 
 namespace {
 struct AffineReductionPass : public AffineReductionBase<AffineReductionPass> {
@@ -200,7 +201,7 @@ struct AffineForReductionIter : public OpRewritePattern<affine::AffineForOp> {
         newOperands.push_back(std::get<1>(pair)->getOperand(0));
         // rewriter.eraseOp(std::get<1>(pair));
       }
-      mergedTerminator.operandsMutable().assign(newOperands);
+      mergedTerminator.getOperandsMutable().assign(newOperands);
     };
 
     auto mergedYieldOp = cast<affine::AffineYieldOp>(newBlock->getTerminator());
