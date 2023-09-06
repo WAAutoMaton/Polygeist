@@ -309,7 +309,7 @@ bool isParallelOp(Operation *op) {
   return isa<scf::ParallelOp, affine::AffineParallelOp>(op);
 }
 
-bool isIfOp(Operation *op) { return isa<scf::IfOp, AffineIfOp>(op); }
+bool isIfOp(Operation *op) { return isa<scf::IfOp, affine::AffineIfOp>(op); }
 
 /// Populates `crossing` with values (op results) that are defined in the same
 /// block as `op` and above it, and used by at least one op in the same block
@@ -364,7 +364,7 @@ static void findValuesUsedBelow(polygeist::BarrierOp op,
               origUser->hasTrait<OpTrait::IsTerminator>()) {
             preserveAllocas.insert(current.second);
           }
-          if (!isa<LLVM::LoadOp, memref::LoadOp, AffineLoadOp>(origUser)) {
+          if (!isa<LLVM::LoadOp, memref::LoadOp, affine::AffineLoadOp>(origUser)) {
             for (auto res : origUser->getResults()) {
               if (crossing.contains(res)) {
                 preserveAllocas.insert(current.second);
@@ -673,7 +673,7 @@ LogicalResult splitSubLoop(affine::AffineParallelOp op, PatternRewriter &rewrite
     }
     SmallVector<Value> ops = dims;
     ops.append(symbols);
-    iterCounts.push_back(rewriter.create<AffineApplyOp>(
+    iterCounts.push_back(rewriter.create<affine::AffineApplyOp>(
         op.getLoc(), AffineMap::get(dims.size(), symbols.size(), expr), ops));
   }
   preLoop = rewriter.create<affine::AffineParallelOp>(
@@ -733,7 +733,7 @@ static LogicalResult distributeAroundBarrier(T op, BarrierOp barrier,
 
       // We always have to recalculate operands of yields, otherwise check if we
       // don't already have the results
-      if (!isa<scf::YieldOp, AffineYieldOp>(op) &&
+      if (!isa<scf::YieldOp, affine::AffineYieldOp>(op) &&
           llvm::all_of(op->getResults(),
                        [&mapping](Value v) { return mapping.contains(v); }))
         return;
@@ -936,7 +936,7 @@ static LogicalResult distributeAroundBarrier(T op, BarrierOp barrier,
       rewriter.create<scf::YieldOp>(op.getLoc());
     else {
       assert(isa<affine::AffineParallelOp>(outerLoop));
-      rewriter.create<AffineYieldOp>(op.getLoc());
+      rewriter.create<affine::AffineYieldOp>(op.getLoc());
     }
   } else {
     rewriter.create<memref::AllocaScopeReturnOp>(op.getLoc());
@@ -1108,7 +1108,7 @@ static LogicalResult wrapAndDistribute(T op, bool singleExecution,
     return failure();
 
   bool recomputable = arePreceedingOpsFullyRecomputable(op, singleExecution);
-  if (recomputable && isa<scf::YieldOp, AffineYieldOp>(op->getNextNode())) {
+  if (recomputable && isa<scf::YieldOp, affine::AffineYieldOp>(op->getNextNode())) {
     return failure();
   }
 
@@ -1173,13 +1173,13 @@ struct WrapForWithBarrier : public OpRewritePattern<scf::ForOp> {
 };
 
 template <bool UseMinCut>
-struct WrapAffineForWithBarrier : public OpRewritePattern<AffineForOp> {
+struct WrapAffineForWithBarrier : public OpRewritePattern<affine::AffineForOp> {
   WrapAffineForWithBarrier(MLIRContext *ctx)
-      : OpRewritePattern<AffineForOp>(ctx) {}
+      : OpRewritePattern<affine::AffineForOp>(ctx) {}
 
-  LogicalResult matchAndRewrite(AffineForOp op,
+  LogicalResult matchAndRewrite(affine::AffineForOp op,
                                 PatternRewriter &rewriter) const override {
-    return wrapAndDistribute<AffineForOp, UseMinCut>(
+    return wrapAndDistribute<affine::AffineForOp, UseMinCut>(
         op, /* singleExecution */ false, rewriter);
   }
 };
@@ -1296,7 +1296,7 @@ SmallVector<Value> getLowerBounds(affine::AffineParallelOp op,
   SmallVector<Value> vals;
   for (AffineExpr expr : op.getLowerBoundsMap().getResults()) {
     vals.push_back(rewriter
-                       .create<AffineApplyOp>(op.getLoc(), expr,
+                       .create<affine::AffineApplyOp>(op.getLoc(), expr,
                                               op.getLowerBoundsOperands())
                        .getResult());
   }
@@ -1349,7 +1349,7 @@ static void moveBodies(PatternRewriter &rewriter, ParallelOpType op,
 }
 template <typename ParallelOpType>
 static void moveBodies(PatternRewriter &rewriter, ParallelOpType op,
-                       AffineIfOp forIf, AffineIfOp newForIf) {
+                       affine::AffineIfOp forIf, affine::AffineIfOp newForIf) {
   moveBodiesIf(rewriter, op, forIf, newForIf);
 }
 template <typename ParallelOpType>
@@ -1359,7 +1359,7 @@ static void moveBodies(PatternRewriter &rewriter, ParallelOpType op,
 }
 template <typename ParallelOpType>
 static void moveBodies(PatternRewriter &rewriter, ParallelOpType op,
-                       AffineForOp forIf, AffineForOp newForIf) {
+                       affine::AffineForOp forIf, affine::AffineForOp newForIf) {
   moveBodiesFor(rewriter, op, forIf, newForIf);
 }
 
@@ -1412,7 +1412,7 @@ struct InterchangeForIfPFor : public OpRewritePattern<ParallelOpType> {
     }
 
     if (!arePreceedingOpsFullyRecomputable(
-            lastOp, /* singleExecution */ isa<scf::IfOp, AffineIfOp>(
+            lastOp, /* singleExecution */ isa<scf::IfOp, affine::AffineIfOp>(
                 (Operation *)lastOp))) {
       LLVM_DEBUG(DBGS() << "[interchange] found a nonrecomputable op\n");
       return failure();
@@ -1750,7 +1750,7 @@ struct HoistBarrierIf : public OpRewritePattern<IfType> {
         rewriter.clone(*it, mapping);
       // in the if
       for (auto it = getThenBlock(op)->begin();
-           !isa<scf::YieldOp, AffineYieldOp>(&*it); it++) {
+           !isa<scf::YieldOp, affine::AffineYieldOp>(&*it); it++) {
         rewriter.clone(*it, mapping);
       }
       // after the if
@@ -1780,7 +1780,7 @@ struct HoistBarrierIf : public OpRewritePattern<IfType> {
         rewriter.clone(*it, mapping);
       // in the if
       for (auto it = getElseBlock(op)->begin();
-           !isa<scf::YieldOp, AffineYieldOp>(&*it); it++) {
+           !isa<scf::YieldOp, affine::AffineYieldOp>(&*it); it++) {
         rewriter.clone(*it, mapping);
       }
       // after the if
@@ -1836,7 +1836,7 @@ void getIfCrossingCache(mlir::PatternRewriter &rewriter, Block *original,
 
       // We always have to recalculate operands of yields, otherwise check if we
       // don't already have the results
-      if (!isa<scf::YieldOp, AffineYieldOp>(op) &&
+      if (!isa<scf::YieldOp, affine::AffineYieldOp>(op) &&
           llvm::all_of(op->getResults(),
                        [&mapping](Value v) { return mapping.contains(v); }))
         return;
@@ -2452,8 +2452,8 @@ struct Reg2MemIf : public OpRewritePattern<T> {
       }
     }
     rewriter.setInsertionPoint(thenYield);
-    if (isa<AffineIfOp>(op))
-      rewriter.replaceOpWithNewOp<AffineYieldOp>(thenYield);
+    if (isa<affine::AffineIfOp>(op))
+      rewriter.replaceOpWithNewOp<affine::AffineYieldOp>(thenYield);
     else
       rewriter.replaceOpWithNewOp<scf::YieldOp>(thenYield);
 
@@ -2511,8 +2511,8 @@ struct Reg2MemIf : public OpRewritePattern<T> {
       }
     }
     rewriter.setInsertionPoint(elseYield);
-    if (isa<AffineIfOp>(op))
-      rewriter.replaceOpWithNewOp<AffineYieldOp>(elseYield);
+    if (isa<affine::AffineIfOp>(op))
+      rewriter.replaceOpWithNewOp<affine::AffineYieldOp>(elseYield);
     else
       rewriter.replaceOpWithNewOp<scf::YieldOp>(elseYield);
 
@@ -2645,37 +2645,37 @@ struct CPUifyPass : public SCFCPUifyBase<CPUifyPass> {
   void addPatterns(RewritePatternSet &patterns, StringRef method) {
     patterns.insert<
         BarrierElim</*TopLevelOnly*/ false>, Reg2MemWhile,
-        Reg2MemFor<scf::ForOp, UseMinCut>, Reg2MemFor<AffineForOp, UseMinCut>,
-        Reg2MemIf<scf::IfOp, UseMinCut>, Reg2MemIf<AffineIfOp, UseMinCut>,
+        Reg2MemFor<scf::ForOp, UseMinCut>, Reg2MemFor<affine::AffineForOp, UseMinCut>,
+        Reg2MemIf<scf::IfOp, UseMinCut>, Reg2MemIf<affine::AffineIfOp, UseMinCut>,
         WrapForWithBarrier<UseMinCut>, WrapAffineForWithBarrier<UseMinCut>,
         WrapWhileWithBarrier<UseMinCut>,
         InterchangeForIfPFor<scf::ParallelOp, scf::ForOp>,
         InterchangeForIfPFor<affine::AffineParallelOp, scf::ForOp>,
-        InterchangeForIfPFor<scf::ParallelOp, AffineForOp>,
-        InterchangeForIfPFor<affine::AffineParallelOp, AffineForOp>,
+        InterchangeForIfPFor<scf::ParallelOp, affine::AffineForOp>,
+        InterchangeForIfPFor<affine::AffineParallelOp, affine::AffineForOp>,
         InterchangeWhilePFor<scf::ParallelOp>,
         InterchangeWhilePFor<affine::AffineParallelOp>,
         InterchangeForIfPFor<scf::ParallelOp, scf::IfOp>,
         InterchangeForIfPFor<affine::AffineParallelOp, scf::IfOp>,
-        InterchangeForIfPFor<scf::ParallelOp, AffineIfOp>,
-        InterchangeForIfPFor<affine::AffineParallelOp, AffineIfOp>>(&getContext());
+        InterchangeForIfPFor<scf::ParallelOp, affine::AffineIfOp>,
+        InterchangeForIfPFor<affine::AffineParallelOp, affine::AffineIfOp>>(&getContext());
     if (method.contains("ifhoist")) {
       patterns.insert<HoistBarrierIf<scf::ParallelOp, scf::IfOp>,
-                      HoistBarrierIf<scf::ParallelOp, AffineIfOp>,
+                      HoistBarrierIf<scf::ParallelOp, affine::AffineIfOp>,
                       HoistBarrierIf<affine::AffineParallelOp, scf::IfOp>,
-                      HoistBarrierIf<affine::AffineParallelOp, AffineIfOp>>(
+                      HoistBarrierIf<affine::AffineParallelOp, affine::AffineIfOp>>(
           &getContext());
     } else {
       if (method.contains("ifsplit")) {
         patterns.insert<
             DistributeIfAroundBarrier<scf::IfOp, affine::AffineParallelOp, UseMinCut>,
-            DistributeIfAroundBarrier<AffineIfOp, affine::AffineParallelOp, UseMinCut>,
+            DistributeIfAroundBarrier<affine::AffineIfOp, affine::AffineParallelOp, UseMinCut>,
             DistributeIfAroundBarrier<scf::IfOp, scf::ParallelOp, UseMinCut>,
-            DistributeIfAroundBarrier<AffineIfOp, scf::ParallelOp, UseMinCut>>(
+            DistributeIfAroundBarrier<affine::AffineIfOp, scf::ParallelOp, UseMinCut>>(
             &getContext());
       }
       patterns.insert<WrapIfWithBarrier<scf::IfOp, UseMinCut>,
-                      WrapIfWithBarrier<AffineIfOp, UseMinCut>>(&getContext());
+                      WrapIfWithBarrier<affine::AffineIfOp, UseMinCut>>(&getContext());
     }
 
     patterns.insert<

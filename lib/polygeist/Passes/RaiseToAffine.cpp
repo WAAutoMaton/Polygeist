@@ -140,7 +140,7 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
         ubMap = removeDuplicateExprs(ubMap);
       }
 
-      AffineForOp affineLoop = rewriter.create<AffineForOp>(
+      affine::AffineForOp affineLoop = rewriter.create<affine::AffineForOp>(
           loop.getLoc(), lbs, lbMap, ubs, ubMap, getStep(loop.getStep()),
           loop.getIterOperands());
 
@@ -171,7 +171,7 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
                            &affineLoop.getRegion().front(), vals);
 
       rewriter.setInsertionPoint(mergedYieldOp);
-      rewriter.create<AffineYieldOp>(mergedYieldOp.getLoc(),
+      rewriter.create<affine::AffineYieldOp>(mergedYieldOp.getLoc(),
                                      mergedYieldOp.getOperands());
       rewriter.eraseOp(mergedYieldOp);
 
@@ -262,7 +262,7 @@ struct ParallelOpRaising : public OpRewritePattern<scf::ParallelOp> {
                          &affineLoop.getRegion().front(), vals);
 
     rewriter.setInsertionPoint(mergedYieldOp);
-    rewriter.create<AffineYieldOp>(mergedYieldOp.getLoc(),
+    rewriter.create<affine::AffineYieldOp>(mergedYieldOp.getLoc(),
                                    mergedYieldOp.getOperands());
     rewriter.eraseOp(mergedYieldOp);
 
