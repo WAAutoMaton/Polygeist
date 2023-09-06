@@ -417,7 +417,7 @@ static void reg2mem(ArrayRef<llvm::SetVector<Block *>> subgraphs,
 
   // Insert allocations as early as possible, the stores immediately when the
   // value is available and the loads immediately before each use. Further
-  // mem2reg is expected to clean up the cases where a value is stored and
+  // polygeist-mem2reg is expected to clean up the cases where a value is stored and
   // loaded back in the same block or subsequent blocks because there is no
   // guarantee that the block was not copied in another subgraph.
 

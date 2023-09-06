@@ -1,4 +1,4 @@
-// RUN: polygeist-opt --mem2reg --split-input-file %s | FileCheck %s
+// RUN: polygeist-opt --polygeist-mem2reg --split-input-file %s | FileCheck %s
 
 module {
   llvm.func @scanf(!llvm.ptr<i8>, ...) -> i32

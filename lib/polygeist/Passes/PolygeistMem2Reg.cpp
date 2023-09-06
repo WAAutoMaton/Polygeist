@@ -1,4 +1,4 @@
-//===- Mem2Reg.cpp - MemRef DataFlow Optimization pass ------ -*-===//
+//===- PolygeistMem2Reg.cpp - MemRef DataFlow Optimization pass ------ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -201,7 +201,7 @@ namespace {
 // currently only eliminates the stores only if no other loads/uses (other
 // than dealloc) remain.
 //
-struct Mem2Reg : public Mem2RegBase<Mem2Reg> {
+struct PolygeistMem2Reg : public PolygeistMem2RegBase<PolygeistMem2Reg> {
   void runOnOperation() override;
 
   // return if changed
@@ -215,8 +215,8 @@ struct Mem2Reg : public Mem2RegBase<Mem2Reg> {
 
 /// Creates a pass to perform optimizations relying on memref dataflow such as
 /// store to load forwarding, elimination of dead stores, and dead allocs.
-std::unique_ptr<Pass> mlir::polygeist::createMem2RegPass() {
-  return std::make_unique<Mem2Reg>();
+std::unique_ptr<Pass> mlir::polygeist::createPolygeistMem2RegPass() {
+  return std::make_unique<PolygeistMem2Reg>();
 }
 
 Match matchesIndices(mlir::OperandRange ops, const std::vector<Offset> &idx) {
@@ -1072,7 +1072,7 @@ const std::set<std::string> &getNonCapturingFunctions();
 std::set<std::string> NoWriteFunctions = {"exit", "__errno_location"};
 // This is a straightforward implementation not optimized for speed. Optimize
 // if needed.
-bool Mem2Reg::forwardStoreToLoad(
+bool PolygeistMem2Reg::forwardStoreToLoad(
     mlir::Value AI, std::vector<Offset> idx,
     SmallVectorImpl<Operation *> &loadOpsToErase,
     DenseMap<Operation *, SmallVector<Operation *>> &capturedAliasing) {
@@ -1899,7 +1899,7 @@ std::vector<std::vector<Offset>> getLastStored(mlir::Value AI) {
   return todo;
 }
 
-void Mem2Reg::runOnOperation() {
+void PolygeistMem2Reg::runOnOperation() {
   auto *f = getOperation();
 
   // Variable indicating that a memref has had a load removed

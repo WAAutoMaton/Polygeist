@@ -3,7 +3,7 @@ add_mlir_dialect_library(MLIRPolygeistTransforms
   AffineReduction.cpp
   CanonicalizeFor.cpp
   LoopRestructure.cpp
-  Mem2Reg.cpp
+  PolygeistMem2Reg.cpp
   ParallelLoopDistribute.cpp
   ParallelLICM.cpp
   OpenMPOpt.cpp

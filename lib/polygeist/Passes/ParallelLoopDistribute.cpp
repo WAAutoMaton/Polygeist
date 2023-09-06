@@ -1193,7 +1193,7 @@ struct WrapWhileWithBarrier : public OpRewritePattern<scf::WhileOp> {
   LogicalResult matchAndRewrite(scf::WhileOp op,
                                 PatternRewriter &rewriter) const override {
     if (op.getNumOperands() != 0 || op.getNumResults() != 0) {
-      LLVM_DEBUG(DBGS() << "[wrap-while] ignoring non-mem2reg'd loop ops: "
+      LLVM_DEBUG(DBGS() << "[wrap-while] ignoring non-polygeist-mem2reg'd loop ops: "
                         << op.getNumOperands() << " res: " << op.getNumResults()
                         << "\n";);
       return failure();
