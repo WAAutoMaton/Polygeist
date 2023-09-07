@@ -70,6 +70,7 @@ def ParallelLower : Pass<"parallel-lower", "mlir::ModuleOp"> {
   let summary = "Lower gpu launch op to parallel ops";
   let dependentDialects = [
     "scf::SCFDialect",
+    "polygeist::PolygeistDialect",
     "cf::ControlFlowDialect",
     "memref::MemRefDialect",
     "func::FuncDialect",
