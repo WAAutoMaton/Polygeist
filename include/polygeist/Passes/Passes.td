@@ -69,6 +69,7 @@ def ConvertCudaRTtoHipRT : Pass<"convert-cudart-to-gpu", "mlir::ModuleOp"> {
 def ParallelLower : Pass<"parallel-lower", "mlir::ModuleOp"> {
   let summary = "Lower gpu launch op to parallel ops";
   let dependentDialects = [
+    "scf::SCFDialect",
     "cf::ControlFlowDialect",
     "memref::MemRefDialect",
     "func::FuncDialect",
