@@ -1,4 +1,4 @@
-// RUN: polygeist-opt --canonicalize --split-input-file %s --allow-unregistered-dialect | FileCheck %s
+// RUN: polygeist-opt --canonicalize-polygeist --split-input-file %s --allow-unregistered-dialect | FileCheck %s
 
 #set = affine_set<(d0, d1, d2, d3)[s0, s1] : (d0 + d1 * 16 - s1 + (d2 + d3 * 16) * s0 >= 0)>
 #set1 = affine_set<(d0, d1, d2, d3)[s0, s1] : (d1 - s1 + d3 * 16 + (d0 + d2 * 16) * s0 - 1 >= 0)>

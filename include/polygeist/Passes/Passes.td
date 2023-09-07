@@ -2,6 +2,7 @@
 #define POLYGEIST_PASSES
 
 include "mlir/Pass/PassBase.td"
+include "mlir/Rewrite/PassUtil.td"
 
 def AffineCFG : Pass<"affine-cfg"> {
   let summary = "Replace scf.if and similar with affine.if";
@@ -174,6 +175,34 @@ def OpenMPOptPass : Pass<"openmp-opt"> {
     "omp::OpenMPDialect",
     "LLVM::LLVMDialect",
   ];
+}
+
+def PolygeistCanonicalize : Pass<"canonicalize-polygeist"> {
+  let constructor = "mlir::polygeist::createPolygeistCanonicalizePass()";
+  let dependentDialects = [
+    "func::FuncDialect",
+    "LLVM::LLVMDialect",
+    "memref::MemRefDialect",
+    "gpu::GPUDialect",
+    "arith::ArithDialect",
+    "cf::ControlFlowDialect",
+    "scf::SCFDialect",
+  ];
+  let options = [
+    Option<"topDownProcessingEnabled", "top-down", "bool",
+           /*default=*/"true",
+           "Seed the worklist in general top-down order">,
+    Option<"enableRegionSimplification", "region-simplify", "bool",
+           /*default=*/"true",
+           "Perform control flow optimizations to the region tree">,
+    Option<"maxIterations", "max-iterations", "int64_t",
+           /*default=*/"10",
+           "Max. iterations between applying patterns / simplifying regions">,
+    Option<"maxNumRewrites", "max-num-rewrites", "int64_t", /*default=*/"-1",
+           "Max. number of pattern rewrites within an iteration">,
+    Option<"testConvergence", "test-convergence", "bool", /*default=*/"false",
+           "Test only: Fail pass on non-convergence to detect cyclic pattern">
+  ] # RewritePassUtils.options;
 }
 
 def LoopRestructure : Pass<"loop-restructure"> {

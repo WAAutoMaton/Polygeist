@@ -5,6 +5,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "polygeist/Dialect.h"
 #include <memory>
 
@@ -55,6 +56,11 @@ createConvertParallelToGPUPass2(bool emitGPUKernelLaunchBounds = true);
 std::unique_ptr<Pass> createMergeGPUModulesPass();
 std::unique_ptr<Pass> createLowerAlternativesPass();
 std::unique_ptr<Pass> createCollectKernelStatisticsPass();
+std::unique_ptr<Pass> createPolygeistCanonicalizePass();
+std::unique_ptr<Pass>
+createPolygeistCanonicalizePass(const GreedyRewriteConfig &config,
+                                ArrayRef<std::string> disabledPatterns,
+                                ArrayRef<std::string> enabledPatterns);
 std::unique_ptr<Pass> createGpuSerializeToCubinPass(
     StringRef arch, StringRef features, int llvmOptLevel, int ptxasOptLevel,
     std::string ptxasPath, std::string libDevicePath, bool outputIntermediate);

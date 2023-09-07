@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRPolygeistTransforms
   CanonicalizeFor.cpp
   LoopRestructure.cpp
   PolygeistMem2Reg.cpp
+  PolygeistCanonicalize.cpp
   ParallelLoopDistribute.cpp
   ParallelLICM.cpp
   OpenMPOpt.cpp

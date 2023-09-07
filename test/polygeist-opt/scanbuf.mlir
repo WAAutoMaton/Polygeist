@@ -1,4 +1,4 @@
-// RUN: polygeist-opt --canonicalize --split-input-file %s --allow-unregistered-dialect | FileCheck %s
+// RUN: polygeist-opt --canonicalize-polygeist --split-input-file %s --allow-unregistered-dialect | FileCheck %s
 
 module {
   llvm.mlir.global internal constant @str5("%d   \00") {addr_space = 0 : i32}
