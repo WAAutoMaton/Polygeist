@@ -164,7 +164,7 @@ void MLIRScanner::buildAffineLoopImpl(
   auto affineOp = builder.create<affine::AffineForOp>(
       loc, lb, builder.getSymbolIdentityMap(), ub,
       builder.getSymbolIdentityMap(), descr.getStep(),
-      /*iterArgs=*/{});
+      /*iterArgs=*/std::nullopt);
 
   auto &reg = affineOp.getLoopBody();
 
