@@ -5,9 +5,9 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 
-static inline mlir::scf::IfOp
-cloneWithResults(mlir::scf::IfOp op, mlir::OpBuilder &rewriter,
-                 mlir::IRMapping mapping = {}) {
+static inline mlir::scf::IfOp cloneWithResults(mlir::scf::IfOp op,
+                                               mlir::OpBuilder &rewriter,
+                                               mlir::IRMapping mapping = {}) {
   using namespace mlir;
   return rewriter.create<scf::IfOp>(op.getLoc(), op.getResultTypes(),
                                     mapping.lookupOrDefault(op.getCondition()),
@@ -21,27 +21,26 @@ cloneWithResults(mlir::affine::AffineIfOp op, mlir::OpBuilder &rewriter,
   for (auto o : op.getOperands())
     lower.push_back(mapping.lookupOrDefault(o));
   return rewriter.create<affine::AffineIfOp>(op.getLoc(), op.getResultTypes(),
-                                     op.getIntegerSet(), lower, true);
+                                             op.getIntegerSet(), lower, true);
 }
 
-static inline mlir::scf::IfOp
-cloneWithoutResults(mlir::scf::IfOp op, mlir::OpBuilder &rewriter,
-                    mlir::IRMapping mapping = {},
-                    mlir::TypeRange types = {}) {
+static inline mlir::scf::IfOp cloneWithoutResults(mlir::scf::IfOp op,
+                                                  mlir::OpBuilder &rewriter,
+                                                  mlir::IRMapping mapping = {},
+                                                  mlir::TypeRange types = {}) {
   using namespace mlir;
   return rewriter.create<scf::IfOp>(
       op.getLoc(), types, mapping.lookupOrDefault(op.getCondition()), true);
 }
 static inline mlir::affine::AffineIfOp
 cloneWithoutResults(mlir::affine::AffineIfOp op, mlir::OpBuilder &rewriter,
-                    mlir::IRMapping mapping = {},
-                    mlir::TypeRange types = {}) {
+                    mlir::IRMapping mapping = {}, mlir::TypeRange types = {}) {
   using namespace mlir;
   SmallVector<mlir::Value> lower;
   for (auto o : op.getOperands())
     lower.push_back(mapping.lookupOrDefault(o));
-  return rewriter.create<affine::AffineIfOp>(op.getLoc(), types, op.getIntegerSet(),
-                                     lower, true);
+  return rewriter.create<affine::AffineIfOp>(op.getLoc(), types,
+                                             op.getIntegerSet(), lower, true);
 }
 
 static inline mlir::scf::ForOp
@@ -54,7 +53,8 @@ cloneWithoutResults(mlir::scf::ForOp op, mlir::PatternRewriter &rewriter,
       mapping.lookupOrDefault(op.getStep()));
 }
 static inline mlir::affine::AffineForOp
-cloneWithoutResults(mlir::affine::AffineForOp op, mlir::PatternRewriter &rewriter,
+cloneWithoutResults(mlir::affine::AffineForOp op,
+                    mlir::PatternRewriter &rewriter,
                     mlir::IRMapping mapping = {}) {
   using namespace mlir;
   SmallVector<Value> lower;
@@ -63,9 +63,9 @@ cloneWithoutResults(mlir::affine::AffineForOp op, mlir::PatternRewriter &rewrite
   SmallVector<Value> upper;
   for (auto o : op.getUpperBoundOperands())
     upper.push_back(mapping.lookupOrDefault(o));
-  return rewriter.create<affine::AffineForOp>(op.getLoc(), lower, op.getLowerBoundMap(),
-                                      upper, op.getUpperBoundMap(),
-                                      op.getStep());
+  return rewriter.create<affine::AffineForOp>(
+      op.getLoc(), lower, op.getLowerBoundMap(), upper, op.getUpperBoundMap(),
+      op.getStep());
 }
 
 static inline void clearBlock(mlir::Block *block,
@@ -108,14 +108,18 @@ static inline mlir::Region &getElseRegion(mlir::affine::AffineIfOp op) {
 static inline mlir::scf::YieldOp getThenYield(mlir::scf::IfOp op) {
   return op.thenYield();
 }
-static inline mlir::affine::AffineYieldOp getThenYield(mlir::affine::AffineIfOp op) {
-  return llvm::cast<mlir::affine::AffineYieldOp>(op.getThenBlock()->getTerminator());
+static inline mlir::affine::AffineYieldOp
+getThenYield(mlir::affine::AffineIfOp op) {
+  return llvm::cast<mlir::affine::AffineYieldOp>(
+      op.getThenBlock()->getTerminator());
 }
 static inline mlir::scf::YieldOp getElseYield(mlir::scf::IfOp op) {
   return op.elseYield();
 }
-static inline mlir::affine::AffineYieldOp getElseYield(mlir::affine::AffineIfOp op) {
-  return llvm::cast<mlir::affine::AffineYieldOp>(op.getElseBlock()->getTerminator());
+static inline mlir::affine::AffineYieldOp
+getElseYield(mlir::affine::AffineIfOp op) {
+  return llvm::cast<mlir::affine::AffineYieldOp>(
+      op.getElseBlock()->getTerminator());
 }
 
 static inline bool inBound(mlir::scf::IfOp op, mlir::Value v) {

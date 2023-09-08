@@ -15,8 +15,8 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
@@ -681,7 +681,9 @@ struct SplitParallelOp : public OpRewritePattern<polygeist::GPUWrapperOp> {
       // TODO we can actually generate multiple kernels here and dynamically
       // split from the grid dimension that has enough parallelism in it
 
-      unsigned threadsLeft = (llvm::bit_floor(static_cast<unsigned>(maxThreads) / static_cast<unsigned>(threadNum)));
+      unsigned threadsLeft =
+          (llvm::bit_floor(static_cast<unsigned>(maxThreads) /
+                           static_cast<unsigned>(threadNum)));
       threadNum *= threadsLeft;
       assert(threadNum <= maxThreads);
 
@@ -1508,7 +1510,7 @@ struct ParallelToGPULaunch : public OpRewritePattern<polygeist::GPUWrapperOp> {
     rewriter.setInsertionPointToStart(errOp.getBody());
     rewriter.eraseOp(wrapper.getBody()->getTerminator());
     rewriter.inlineBlockBefore(wrapper.getBody(),
-                              errOp.getBody()->getTerminator());
+                               errOp.getBody()->getTerminator());
     rewriter.replaceOp(wrapper, errOp->getResults());
 
     // TODO make sure we start at zero or else convert the parallel ops to start

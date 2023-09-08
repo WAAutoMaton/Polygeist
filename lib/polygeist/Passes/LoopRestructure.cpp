@@ -19,14 +19,14 @@
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
+#include "polygeist/Dialect.h"
 #include "polygeist/Passes/Passes.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/GenericLoopInfo.h"
 #include "llvm/Support/GenericLoopInfoImpl.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
-#include "llvm/Support/Debug.h"
-#include "polygeist/Dialect.h"
 
 #define DEBUG_TYPE "LoopRestructure"
 

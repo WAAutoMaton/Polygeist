@@ -31,7 +31,8 @@ struct AffineForReductionIter : public OpRewritePattern<affine::AffineForOp> {
     return false;
   }
 
-  bool areInSameAffineFor(affine::AffineLoadOp load, affine::AffineStoreOp store,
+  bool areInSameAffineFor(affine::AffineLoadOp load,
+                          affine::AffineStoreOp store,
                           affine::AffineForOp forOp) const {
     return isInCurrentAffineFor(load.getOperation(), forOp) &&
            isInCurrentAffineFor(store.getOperation(), forOp);
@@ -39,8 +40,9 @@ struct AffineForReductionIter : public OpRewritePattern<affine::AffineForOp> {
 
   template <typename T>
   bool haveSameIndices(affine::AffineLoadOp load, T storeOrLoad) const {
-    static_assert(llvm::is_one_of<T, affine::AffineLoadOp, affine::AffineStoreOp>::value,
-                  "applies to only affine::AffineLoadOp or affine::AffineStoreOp");
+    static_assert(
+        llvm::is_one_of<T, affine::AffineLoadOp, affine::AffineStoreOp>::value,
+        "applies to only affine::AffineLoadOp or affine::AffineStoreOp");
     SmallVector<Value, 4> loadIndices(load.getIndices());
     SmallVector<Value, 4> storeOrLoadIndices = storeOrLoad.getIndices();
     if (loadIndices.size() != storeOrLoadIndices.size())
@@ -49,9 +51,11 @@ struct AffineForReductionIter : public OpRewritePattern<affine::AffineForOp> {
                       storeOrLoadIndices.begin());
   }
 
-  template <typename T> bool areCompatible(affine::AffineLoadOp load, T store) const {
-    static_assert(llvm::is_one_of<T, affine::AffineLoadOp, affine::AffineStoreOp>::value,
-                  "applies to only affine::AffineLoadOp or affine::AffineStoreOp");
+  template <typename T>
+  bool areCompatible(affine::AffineLoadOp load, T store) const {
+    static_assert(
+        llvm::is_one_of<T, affine::AffineLoadOp, affine::AffineStoreOp>::value,
+        "applies to only affine::AffineLoadOp or affine::AffineStoreOp");
     if (load.getMemRef() != store.getMemRef()) {
       return false;
     }

@@ -55,8 +55,8 @@ Operation *mlirclang::replaceFuncByOperation(
     return buildLinalgOp(opName, b, input, output);
 
   // NOTE: The attributes of the provided FuncOp is ignored.
-  OperationState opState(b.getUnknownLoc(), opName, input,
-                         f.getResultTypes(), {});
+  OperationState opState(b.getUnknownLoc(), opName, input, f.getResultTypes(),
+                         {});
   return b.create(opState);
 }
 

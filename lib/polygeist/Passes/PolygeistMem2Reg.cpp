@@ -545,8 +545,8 @@ public:
   Value materializeIf(bool full = true) {
     if (auto sop = dyn_cast<scf::IfOp>(ifOp))
       return materializeIf<scf::IfOp, scf::YieldOp>(sop, full);
-    return materializeIf<affine::AffineIfOp, affine::AffineYieldOp>(cast<affine::AffineIfOp>(ifOp),
-                                                    full);
+    return materializeIf<affine::AffineIfOp, affine::AffineYieldOp>(
+        cast<affine::AffineIfOp>(ifOp), full);
   }
 
   template <typename IfType, typename YieldType>

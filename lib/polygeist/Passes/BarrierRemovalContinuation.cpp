@@ -20,9 +20,9 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -417,8 +417,8 @@ static void reg2mem(ArrayRef<llvm::SetVector<Block *>> subgraphs,
 
   // Insert allocations as early as possible, the stores immediately when the
   // value is available and the loads immediately before each use. Further
-  // polygeist-mem2reg is expected to clean up the cases where a value is stored and
-  // loaded back in the same block or subsequent blocks because there is no
+  // polygeist-mem2reg is expected to clean up the cases where a value is stored
+  // and loaded back in the same block or subsequent blocks because there is no
   // guarantee that the block was not copied in another subgraph.
 
   OpBuilder accessBuilder(parallel.getContext());

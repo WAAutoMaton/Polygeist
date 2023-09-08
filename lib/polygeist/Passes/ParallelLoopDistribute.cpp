@@ -15,8 +15,8 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
@@ -138,7 +138,8 @@ static void getIndVars(Operation *op, SmallPtrSet<Value, 3> &indVars) {
     for (auto var : pop.getInductionVars())
       indVars.insert(var);
   else
-    for (auto var : cast<affine::AffineParallelOp>(op).getBody()->getArguments())
+    for (auto var :
+         cast<affine::AffineParallelOp>(op).getBody()->getArguments())
       indVars.insert(var);
 }
 
@@ -366,7 +367,8 @@ static void findValuesUsedBelow(polygeist::BarrierOp op,
               origUser->hasTrait<OpTrait::IsTerminator>()) {
             preserveAllocas.insert(current.second);
           }
-          if (!isa<LLVM::LoadOp, memref::LoadOp, affine::AffineLoadOp>(origUser)) {
+          if (!isa<LLVM::LoadOp, memref::LoadOp, affine::AffineLoadOp>(
+                  origUser)) {
             for (auto res : origUser->getResults()) {
               if (crossing.contains(res)) {
                 preserveAllocas.insert(current.second);
@@ -534,7 +536,7 @@ struct NormalizeParallel : public OpRewritePattern<scf::ParallelOp> {
     }
 
     rewriter.inlineBlockBefore(op.getBody(), &newOp.getBody()->back(),
-                              inductionVars);
+                               inductionVars);
     rewriter.eraseOp(&newOp.getBody()->back());
     rewriter.eraseOp(op);
     return success();
@@ -599,12 +601,11 @@ LogicalResult splitSubLoop(scf::ParallelOp op, PatternRewriter &rewriter,
   return success();
 }
 
-LogicalResult splitSubLoop(affine::AffineParallelOp op, PatternRewriter &rewriter,
-                           BarrierOp barrier, SmallVector<Value> &iterCounts,
-                           affine::AffineParallelOp &preLoop,
-                           affine::AffineParallelOp &postLoop, Block *&outerBlock,
-                           affine::AffineParallelOp &outerLoop,
-                           memref::AllocaScopeOp &outerEx) {
+LogicalResult splitSubLoop(
+    affine::AffineParallelOp op, PatternRewriter &rewriter, BarrierOp barrier,
+    SmallVector<Value> &iterCounts, affine::AffineParallelOp &preLoop,
+    affine::AffineParallelOp &postLoop, Block *&outerBlock,
+    affine::AffineParallelOp &outerLoop, memref::AllocaScopeOp &outerEx) {
 
   SmallVector<AffineMap> outerLower;
   SmallVector<AffineMap> outerUpper;
@@ -1110,7 +1111,8 @@ static LogicalResult wrapAndDistribute(T op, bool singleExecution,
     return failure();
 
   bool recomputable = arePreceedingOpsFullyRecomputable(op, singleExecution);
-  if (recomputable && isa<scf::YieldOp, affine::AffineYieldOp>(op->getNextNode())) {
+  if (recomputable &&
+      isa<scf::YieldOp, affine::AffineYieldOp>(op->getNextNode())) {
     return failure();
   }
 
@@ -1127,8 +1129,8 @@ static LogicalResult wrapAndDistribute(T op, bool singleExecution,
     Operation *postPop = nullptr;
     (void)distributeAfterWrap<scf::ParallelOp, UseMinCut>(pop, before, rewriter,
                                                           &postPop);
-    (void)distributeAfterWrap<affine::AffineParallelOp, UseMinCut>(pop, before,
-                                                           rewriter, &postPop);
+    (void)distributeAfterWrap<affine::AffineParallelOp, UseMinCut>(
+        pop, before, rewriter, &postPop);
     after = getFirstBarrier(postPop->getBlock());
     (void)distributeAfterWrap<scf::ParallelOp, UseMinCut>(
         dyn_cast_or_null<scf::ParallelOp>(postPop), after, rewriter);
@@ -1138,7 +1140,7 @@ static LogicalResult wrapAndDistribute(T op, bool singleExecution,
     // We only have a barrier after the op
     (void)distributeAfterWrap<scf::ParallelOp, UseMinCut>(pop, after, rewriter);
     (void)distributeAfterWrap<affine::AffineParallelOp, UseMinCut>(pop, after,
-                                                           rewriter);
+                                                                   rewriter);
   }
 
   return success();
@@ -1195,9 +1197,10 @@ struct WrapWhileWithBarrier : public OpRewritePattern<scf::WhileOp> {
   LogicalResult matchAndRewrite(scf::WhileOp op,
                                 PatternRewriter &rewriter) const override {
     if (op.getNumOperands() != 0 || op.getNumResults() != 0) {
-      LLVM_DEBUG(DBGS() << "[wrap-while] ignoring non-polygeist-mem2reg'd loop ops: "
-                        << op.getNumOperands() << " res: " << op.getNumResults()
-                        << "\n";);
+      LLVM_DEBUG(
+          DBGS() << "[wrap-while] ignoring non-polygeist-mem2reg'd loop ops: "
+                 << op.getNumOperands() << " res: " << op.getNumResults()
+                 << "\n";);
       return failure();
     }
 
@@ -1253,7 +1256,7 @@ static void moveBodiesIf(PatternRewriter &rewriter, T op, IfType ifOp,
 
     rewriter.eraseOp(&getThenBlock(ifOp)->back());
     rewriter.inlineBlockBefore(getThenBlock(ifOp),
-                              &newParallel.getBody()->back());
+                               &newParallel.getBody()->back());
 
     insertRecomputables(rewriter, op, newParallel, ifOp);
   }
@@ -1279,7 +1282,7 @@ static void moveBodiesIf(PatternRewriter &rewriter, T op, IfType ifOp,
     }
     rewriter.eraseOp(&getElseBlock(ifOp)->back());
     rewriter.inlineBlockBefore(getElseBlock(ifOp),
-                              &newParallel.getBody()->back());
+                               &newParallel.getBody()->back());
 
     insertRecomputables(rewriter, op, newParallel, ifOp);
   }
@@ -1298,8 +1301,8 @@ SmallVector<Value> getLowerBounds(affine::AffineParallelOp op,
   SmallVector<Value> vals;
   for (AffineExpr expr : op.getLowerBoundsMap().getResults()) {
     vals.push_back(rewriter
-                       .create<affine::AffineApplyOp>(op.getLoc(), expr,
-                                              op.getLowerBoundsOperands())
+                       .create<affine::AffineApplyOp>(
+                           op.getLoc(), expr, op.getLowerBoundsOperands())
                        .getResult());
   }
   return vals;
@@ -1334,11 +1337,11 @@ static void moveBodiesFor(PatternRewriter &rewriter, T op, ForType forLoop,
   // Merge in two stages so we can properly replace uses of two induction
   // varibales defined in different blocks.
   rewriter.inlineBlockBefore(op.getBody(), &newParallel.getBody()->back(),
-                            newParallel.getBody()->getArguments());
+                             newParallel.getBody()->getArguments());
   rewriter.eraseOp(&newParallel.getBody()->back());
   rewriter.eraseOp(&forLoop.getBody()->back());
   rewriter.inlineBlockBefore(forLoop.getBody(), &newParallel.getBody()->back(),
-                            newForLoop.getBody()->getArguments());
+                             newForLoop.getBody()->getArguments());
   rewriter.eraseOp(op);
   rewriter.eraseOp(forLoop);
 }
@@ -1361,7 +1364,8 @@ static void moveBodies(PatternRewriter &rewriter, ParallelOpType op,
 }
 template <typename ParallelOpType>
 static void moveBodies(PatternRewriter &rewriter, ParallelOpType op,
-                       affine::AffineForOp forIf, affine::AffineForOp newForIf) {
+                       affine::AffineForOp forIf,
+                       affine::AffineForOp newForIf) {
   moveBodiesFor(rewriter, op, forIf, newForIf);
 }
 
@@ -1543,7 +1547,7 @@ template <typename T> struct InterchangeWhilePFor : public OpRewritePattern<T> {
     auto afterParallelOp = makeNewParallelOp();
 
     rewriter.inlineBlockBefore(&whileOp.getBefore().front(),
-                              beforeParallelOp.getBody()->getTerminator());
+                               beforeParallelOp.getBody()->getTerminator());
     whileOp.getBefore().push_back(new Block());
     conditionOp->moveBefore(&whileOp.getBefore().front(),
                             whileOp.getBefore().front().begin());
@@ -1553,7 +1557,7 @@ template <typename T> struct InterchangeWhilePFor : public OpRewritePattern<T> {
     auto yieldOp = cast<scf::YieldOp>(whileOp.getAfter().front().back());
 
     rewriter.inlineBlockBefore(&whileOp.getAfter().front(),
-                              afterParallelOp.getBody()->getTerminator());
+                               afterParallelOp.getBody()->getTerminator());
     whileOp.getAfter().push_back(new Block());
     yieldOp->moveBefore(&whileOp.getAfter().front(),
                         whileOp.getAfter().front().begin());
@@ -1662,7 +1666,7 @@ struct RotateWhile : public OpRewritePattern<scf::WhileOp> {
     auto conditional =
         rewriter.create<scf::IfOp>(op.getLoc(), condition.getCondition());
     rewriter.inlineBlockBefore(&op.getAfter().front(),
-                              &conditional.getBody()->back());
+                               &conditional.getBody()->back());
     rewriter.eraseOp(&conditional.getBody()->back());
 
     rewriter.createBlock(&op.getAfter());
@@ -2222,7 +2226,7 @@ struct Reg2MemFor : public OpRewritePattern<T> {
 
     auto oldTerminator = op.getBody()->getTerminator();
     rewriter.inlineBlockBefore(op.getBody(), newOp.getBody()->getTerminator(),
-                              newRegionArguments);
+                               newRegionArguments);
     SmallVector<Value> oldOps;
     llvm::append_range(oldOps, oldTerminator->getOperands());
     rewriter.eraseOp(oldTerminator);
@@ -2647,10 +2651,11 @@ struct CPUifyPass : public SCFCPUifyBase<CPUifyPass> {
   void addPatterns(RewritePatternSet &patterns, StringRef method) {
     patterns.insert<
         BarrierElim</*TopLevelOnly*/ false>, Reg2MemWhile,
-        Reg2MemFor<scf::ForOp, UseMinCut>, Reg2MemFor<affine::AffineForOp, UseMinCut>,
-        Reg2MemIf<scf::IfOp, UseMinCut>, Reg2MemIf<affine::AffineIfOp, UseMinCut>,
-        WrapForWithBarrier<UseMinCut>, WrapAffineForWithBarrier<UseMinCut>,
-        WrapWhileWithBarrier<UseMinCut>,
+        Reg2MemFor<scf::ForOp, UseMinCut>,
+        Reg2MemFor<affine::AffineForOp, UseMinCut>,
+        Reg2MemIf<scf::IfOp, UseMinCut>,
+        Reg2MemIf<affine::AffineIfOp, UseMinCut>, WrapForWithBarrier<UseMinCut>,
+        WrapAffineForWithBarrier<UseMinCut>, WrapWhileWithBarrier<UseMinCut>,
         InterchangeForIfPFor<scf::ParallelOp, scf::ForOp>,
         InterchangeForIfPFor<affine::AffineParallelOp, scf::ForOp>,
         InterchangeForIfPFor<scf::ParallelOp, affine::AffineForOp>,
@@ -2660,24 +2665,29 @@ struct CPUifyPass : public SCFCPUifyBase<CPUifyPass> {
         InterchangeForIfPFor<scf::ParallelOp, scf::IfOp>,
         InterchangeForIfPFor<affine::AffineParallelOp, scf::IfOp>,
         InterchangeForIfPFor<scf::ParallelOp, affine::AffineIfOp>,
-        InterchangeForIfPFor<affine::AffineParallelOp, affine::AffineIfOp>>(&getContext());
+        InterchangeForIfPFor<affine::AffineParallelOp, affine::AffineIfOp>>(
+        &getContext());
     if (method.contains("ifhoist")) {
-      patterns.insert<HoistBarrierIf<scf::ParallelOp, scf::IfOp>,
-                      HoistBarrierIf<scf::ParallelOp, affine::AffineIfOp>,
-                      HoistBarrierIf<affine::AffineParallelOp, scf::IfOp>,
-                      HoistBarrierIf<affine::AffineParallelOp, affine::AffineIfOp>>(
-          &getContext());
+      patterns
+          .insert<HoistBarrierIf<scf::ParallelOp, scf::IfOp>,
+                  HoistBarrierIf<scf::ParallelOp, affine::AffineIfOp>,
+                  HoistBarrierIf<affine::AffineParallelOp, scf::IfOp>,
+                  HoistBarrierIf<affine::AffineParallelOp, affine::AffineIfOp>>(
+              &getContext());
     } else {
       if (method.contains("ifsplit")) {
         patterns.insert<
-            DistributeIfAroundBarrier<scf::IfOp, affine::AffineParallelOp, UseMinCut>,
-            DistributeIfAroundBarrier<affine::AffineIfOp, affine::AffineParallelOp, UseMinCut>,
+            DistributeIfAroundBarrier<scf::IfOp, affine::AffineParallelOp,
+                                      UseMinCut>,
+            DistributeIfAroundBarrier<affine::AffineIfOp,
+                                      affine::AffineParallelOp, UseMinCut>,
             DistributeIfAroundBarrier<scf::IfOp, scf::ParallelOp, UseMinCut>,
-            DistributeIfAroundBarrier<affine::AffineIfOp, scf::ParallelOp, UseMinCut>>(
-            &getContext());
+            DistributeIfAroundBarrier<affine::AffineIfOp, scf::ParallelOp,
+                                      UseMinCut>>(&getContext());
       }
       patterns.insert<WrapIfWithBarrier<scf::IfOp, UseMinCut>,
-                      WrapIfWithBarrier<affine::AffineIfOp, UseMinCut>>(&getContext());
+                      WrapIfWithBarrier<affine::AffineIfOp, UseMinCut>>(
+          &getContext());
     }
 
     patterns.insert<
@@ -2686,7 +2696,8 @@ struct CPUifyPass : public SCFCPUifyBase<CPUifyPass> {
         // RotateWhile,
 
         DistributeAroundBarrier<scf::ParallelOp, UseMinCut>,
-        DistributeAroundBarrier<affine::AffineParallelOp, UseMinCut>>(&getContext());
+        DistributeAroundBarrier<affine::AffineParallelOp, UseMinCut>>(
+        &getContext());
   }
   CPUifyPass() = default;
   CPUifyPass(StringRef method) { this->method.setValue(method.str()); }

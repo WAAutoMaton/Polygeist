@@ -382,8 +382,8 @@ mlir::Value MLIRScanner::getLLVM(Expr *E, bool isRef) {
     assert(sub.isReference);
     mlir::Value val = sub.val;
     if (auto mt = val.getType().dyn_cast<MemRefType>()) {
-      val = builder.create<polygeist::Memref2PointerOp>(
-          loc, getOpaquePtr(), val);
+      val =
+          builder.create<polygeist::Memref2PointerOp>(loc, getOpaquePtr(), val);
     }
     return val;
   }
@@ -437,7 +437,8 @@ mlir::Value MLIRScanner::getLLVM(Expr *E, bool isRef) {
     ct = Glob.CGM.getContext().getLValueReferenceType(E->getType());
   }
   if (auto mt = val.getType().dyn_cast<MemRefType>()) {
-    val = builder.create<polygeist::Memref2PointerOp>(loc, LLVM::LLVMPointerType::get(builder.getContext()), val);
+    val = builder.create<polygeist::Memref2PointerOp>(
+        loc, LLVM::LLVMPointerType::get(builder.getContext()), val);
   }
   return val;
 }
@@ -1147,30 +1148,31 @@ ValueCategory MLIRScanner::VisitCallExpr(clang::CallExpr *expr) {
       if (sr->getDecl()->getIdentifier() &&
           (sr->getDecl()->getName() == "memmove" ||
            sr->getDecl()->getName() == "__builtin_memmove")) {
-        std::vector<mlir::Value> args = {
-            getLLVM(expr->getArg(0)), getLLVM(expr->getArg(1)),
-            getLLVM(expr->getArg(2))};
+        std::vector<mlir::Value> args = {getLLVM(expr->getArg(0)),
+                                         getLLVM(expr->getArg(1)),
+                                         getLLVM(expr->getArg(2))};
         builder.create<LLVM::MemmoveOp>(loc, args[0], args[1], args[2],
-                                       /*isVolatile*/ false);
+                                        /*isVolatile*/ false);
         return ValueCategory(args[0], /*isReference*/ false);
       }
       if (sr->getDecl()->getIdentifier() &&
           (sr->getDecl()->getName() == "memset" ||
            sr->getDecl()->getName() == "__builtin_memset")) {
-        std::vector<mlir::Value> args = {
-            getLLVM(expr->getArg(0)), getLLVM(expr->getArg(1)),
-            getLLVM(expr->getArg(2))};
+        std::vector<mlir::Value> args = {getLLVM(expr->getArg(0)),
+                                         getLLVM(expr->getArg(1)),
+                                         getLLVM(expr->getArg(2))};
 
         args[1] = builder.create<TruncIOp>(loc, builder.getI8Type(), args[1]);
-        builder.create<LLVM::MemsetOp>(loc, args[0], args[1], args[2],/*isVolatile*/ false);
+        builder.create<LLVM::MemsetOp>(loc, args[0], args[1], args[2],
+                                       /*isVolatile*/ false);
         return ValueCategory(args[0], /*isReference*/ false);
       }
       if (sr->getDecl()->getIdentifier() &&
           (sr->getDecl()->getName() == "memcpy" ||
            sr->getDecl()->getName() == "__builtin_memcpy")) {
-        std::vector<mlir::Value> args = {
-            getLLVM(expr->getArg(0)), getLLVM(expr->getArg(1)),
-            getLLVM(expr->getArg(2))};
+        std::vector<mlir::Value> args = {getLLVM(expr->getArg(0)),
+                                         getLLVM(expr->getArg(1)),
+                                         getLLVM(expr->getArg(2))};
         builder.create<LLVM::MemcpyOp>(loc, args[0], args[1], args[2], false);
         return ValueCategory(args[0], /*isReference*/ false);
       }

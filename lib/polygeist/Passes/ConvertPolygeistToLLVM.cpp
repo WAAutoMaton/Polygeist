@@ -298,8 +298,7 @@ struct Pointer2MemrefOpLowering
     auto result = getStridesAndOffset(op.getType(), strides, offset);
     (void)result;
     assert(succeeded(result) && "unexpected failure in stride computation");
-    assert(offset != ShapedType::kDynamic &&
-           "expected static offset");
+    assert(offset != ShapedType::kDynamic && "expected static offset");
 
     bool first = true;
     assert(!llvm::any_of(strides, [&](int64_t stride) {
@@ -789,7 +788,8 @@ struct AsyncOpLowering : public ConvertOpToLLVMPattern<async::ExecuteOp> {
             loc, rewriter.getI64Type(),
             rewriter.create<polygeist::TypeSizeOp>(loc, rewriter.getIndexType(),
                                                    ST));
-        auto mallocFunc = LLVM::lookupOrCreateMallocFn(module, getIndexType(), /*opaquePointers=*/ false);
+        auto mallocFunc = LLVM::lookupOrCreateMallocFn(
+            module, getIndexType(), /*opaquePointers=*/false);
         mlir::Value alloc =
             rewriter.create<LLVM::CallOp>(loc, mallocFunc, arg).getResult();
         alloc = rewriter.create<LLVM::BitcastOp>(
@@ -924,10 +924,10 @@ protected:
       return adaptor.getDynamicSizes().front();
 
     Type indexType = rewriter.getIndexType();
-    return this->createIndexAttrConstant(rewriter, original->getLoc(), indexType,
-                                     original.getType().getRank() == 0
-                                         ? 1
-                                         : original.getType().getDimSize(0));
+    return this->createIndexAttrConstant(
+        rewriter, original->getLoc(), indexType,
+        original.getType().getRank() == 0 ? 1
+                                          : original.getType().getDimSize(0));
   }
 };
 
@@ -983,7 +983,9 @@ public:
       for (int64_t size : originalType.getShape().drop_front())
         innerSizes *= size;
       totalSize = rewriter.createOrFold<LLVM::MulOp>(
-          loc, outerSize, createIndexAttrConstant(rewriter, loc, rewriter.getIndexType(), innerSizes));
+          loc, outerSize,
+          createIndexAttrConstant(rewriter, loc, rewriter.getIndexType(),
+                                  innerSizes));
     }
     Value null = rewriter.create<LLVM::NullOp>(loc, convertedType);
     auto next =
@@ -1000,8 +1002,10 @@ public:
     } else {
       LLVM::LLVMFuncOp mallocFunc =
           getTypeConverter()->getOptions().useGenericFunctions
-              ? LLVM::lookupOrCreateGenericAllocFn(module, getIndexType(), /*opaquePointers=*/ false)
-              : LLVM::lookupOrCreateMallocFn(module, getIndexType(), /*opaquePointers=*/ false);
+              ? LLVM::lookupOrCreateGenericAllocFn(module, getIndexType(),
+                                                   /*opaquePointers=*/false)
+              : LLVM::lookupOrCreateMallocFn(module, getIndexType(),
+                                             /*opaquePointers=*/false);
       Value allocated =
           rewriter.create<LLVM::CallOp>(loc, mallocFunc, size).getResult();
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(allocOp, convertedType,
@@ -1028,9 +1032,11 @@ public:
     } else {
       LLVM::LLVMFuncOp freeFunc =
           getTypeConverter()->getOptions().useGenericFunctions
-              ? LLVM::lookupOrCreateGenericFreeFn(module, /*opaquePointers*/ false)
+              ? LLVM::lookupOrCreateGenericFreeFn(module,
+                                                  /*opaquePointers*/ false)
               : LLVM::lookupOrCreateFreeFn(module, /*opaquePointers*/ false);
-      rewriter.replaceOpWithNewOp<LLVM::CallOp>(deallocOp, freeFunc, adaptor.getMemref());
+      rewriter.replaceOpWithNewOp<LLVM::CallOp>(deallocOp, freeFunc,
+                                                adaptor.getMemref());
     }
     return success();
   }
@@ -1097,7 +1103,8 @@ public:
     auto newGlobal = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         globalOp, convertedType, globalOp.getConstant(), globalOp.getSymName(),
         linkage, dso_local, thread_local_, initialValue, alignment,
-        originalType.getMemorySpaceAsInt(), unnamed_addr, section, /*comdat=*/nullptr);
+        originalType.getMemorySpaceAsInt(), unnamed_addr, section,
+        /*comdat=*/nullptr);
     if (!globalOp.isExternal() && globalOp.isUninitialized()) {
       Block *block =
           rewriter.createBlock(&newGlobal.getInitializerRegion(),
@@ -1167,7 +1174,9 @@ protected:
 
     SmallVector<LLVM::GEPArg> args = llvm::to_vector(llvm::map_range(
         adaptor.getIndices(), [](Value v) { return LLVM::GEPArg(v); }));
-    return rewriter.create<LLVM::GEPOp>(loc, this->getElementPtrType(originalType), convertedType, adaptor.getMemref(), args);
+    return rewriter.create<LLVM::GEPOp>(
+        loc, this->getElementPtrType(originalType), convertedType,
+        adaptor.getMemref(), args);
   }
 };
 
@@ -1183,7 +1192,10 @@ public:
     if (!address)
       return failure();
 
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, typeConverter->convertType(loadOp.getMemRefType().getElementType()), address);
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+        loadOp,
+        typeConverter->convertType(loadOp.getMemRefType().getElementType()),
+        address);
     return success();
   }
 };
@@ -1257,8 +1269,7 @@ static SmallVector<NamedAttribute> convertFuncAttributes(
   // Propagate argument/result attributes to all converted arguments/result
   // obtained after converting a given original argument/result.
   SmallVector<NamedAttribute> attributes;
-  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/true,
-                       attributes);
+  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/true, attributes);
   if (ArrayAttr resAttrDicts = funcOp.getAllResultAttrs()) {
     assert(!resAttrDicts.empty() && "expected array to be non-empty");
     auto newResAttrDicts =
@@ -1324,8 +1335,9 @@ static SmallVector<NamedAttribute> convertFuncAttributes(
 /// Returns the LLVM dialect type suitable for constructing the LLVM function
 /// type that has the same results as the given type. If multiple results are to
 /// be returned, packs them into an anonymous LLVM dialect structure type.
-static Type convertAndPackFunctionResultType(FunctionType type,
-                                             const TypeConverter &typeConverter) {
+static Type
+convertAndPackFunctionResultType(FunctionType type,
+                                 const TypeConverter &typeConverter) {
   SmallVector<Type> convertedResultTypes;
   if (failed(
           typeConverter.convertTypes(type.getResults(), convertedResultTypes)))
@@ -1773,8 +1785,8 @@ struct LowerGPUAlternativesOp
         auto ifOp = rewriter.create<scf::IfOp>(loc, cmpOp, /* hasElse */ true);
         auto block = &region.front();
         rewriter.eraseOp(block->getTerminator());
-        rewriter.inlineBlockBefore(block,
-                                  ifOp.getThenRegion().front().getTerminator());
+        rewriter.inlineBlockBefore(
+            block, ifOp.getThenRegion().front().getTerminator());
 
         // Timing
         rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
@@ -2188,7 +2200,8 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
 
             return LLVM::createGlobalString(
                 loc, ctorBuilder, globalName,
-                StringRef(sname.data(), sname.size()), LLVM::Linkage::Internal, /*opaquePointers*/ false);
+                StringRef(sname.data(), sname.size()), LLVM::Linkage::Internal,
+                /*opaquePointers*/ false);
           }();
           // TODO could this be a memref global op?
           auto stub = moduleOp.lookupSymbol<LLVM::GlobalOp>(g.getName());
@@ -2348,7 +2361,8 @@ public:
       auto globalOp = rewriter.create<LLVM::GlobalOp>(
           gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
           LLVM::Linkage::Internal, name, /*value=*/Attribute(),
-          /*alignment=*/0, static_cast<unsigned>(gpu::GPUDialect::getWorkgroupAddressSpace()));
+          /*alignment=*/0,
+          static_cast<unsigned>(gpu::GPUDialect::getWorkgroupAddressSpace()));
       workgroupBuffers.push_back(globalOp);
     }
 
@@ -2554,7 +2568,8 @@ public:
     }
     auto newFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
         funcOp.getLoc(), funcOp.getName(), convertedType, linkage,
-        /*dsoLocal=*/false, /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr, attributes);
+        /*dsoLocal=*/false, /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr,
+        attributes);
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
     if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), *typeConverter,

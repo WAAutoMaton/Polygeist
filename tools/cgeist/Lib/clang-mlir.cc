@@ -443,7 +443,8 @@ void MLIRScanner::init(mlir::func::FuncOp function, const FunctionDecl *fd) {
               builder.getI8Type(),
               src.getType().cast<LLVM::LLVMPointerType>().getAddressSpace()),
           src);
-      builder.create<LLVM::MemcpyOp>(loc, V, src, typeSize, /*isVolatile*/false);
+      builder.create<LLVM::MemcpyOp>(loc, V, src, typeSize,
+                                     /*isVolatile*/ false);
     }
   }
 
@@ -513,7 +514,8 @@ mlir::Value MLIRScanner::createAllocOp(mlir::Type t, VarDecl *name,
       alloc = abuilder.create<mlir::memref::AllocaOp>(varLoc, mr);
       if (memspace != 0) {
         alloc = abuilder.create<polygeist::Pointer2MemrefOp>(
-            varLoc, mlir::MemRefType::get(ShapedType::kDynamic, t, {}, memspace),
+            varLoc,
+            mlir::MemRefType::get(ShapedType::kDynamic, t, {}, memspace),
             abuilder.create<polygeist::Memref2PointerOp>(
                 varLoc, LLVM::LLVMPointerType::get(t, 0), alloc));
       }
@@ -1178,7 +1180,8 @@ ValueCategory MLIRScanner::VisitArrayInitLoop(clang::ArrayInitLoopExpr *expr,
   std::vector<mlir::Value> sizes = {
       getConstantIndex(CAT->getSize().getLimitedValue())};
   AffineMap map = builder.getSymbolIdentityMap();
-  auto affineOp = builder.create<affine::AffineForOp>(loc, start, map, sizes, map);
+  auto affineOp =
+      builder.create<affine::AffineForOp>(loc, start, map, sizes, map);
 
   auto oldpoint = builder.getInsertionPoint();
   auto oldblock = builder.getInsertionBlock();
@@ -2481,8 +2484,7 @@ ValueCategory MLIRScanner::VisitAtomicExpr(clang::AtomicExpr *BO) {
     mlir::Value v;
     if (a0.getType().isa<MemRefType>())
       v = builder.create<memref::AtomicRMWOp>(
-          loc, op, a1, a0,
-          std::vector<mlir::Value>({getConstantIndex(0)}));
+          loc, op, a1, a0, std::vector<mlir::Value>({getConstantIndex(0)}));
     else
       v = builder.create<LLVM::AtomicRMWOp>(loc, lop, a0, a1,
                                             LLVM::AtomicOrdering::acq_rel);
@@ -2522,8 +2524,7 @@ ValueCategory MLIRScanner::VisitAtomicExpr(clang::AtomicExpr *BO) {
     mlir::Value v;
     if (a0.getType().isa<MemRefType>())
       v = builder.create<memref::AtomicRMWOp>(
-          loc, op, a1, a0,
-          std::vector<mlir::Value>({getConstantIndex(0)}));
+          loc, op, a1, a0, std::vector<mlir::Value>({getConstantIndex(0)}));
     else
       v = builder.create<LLVM::AtomicRMWOp>(loc, lop, a0, a1,
                                             LLVM::AtomicOrdering::acq_rel);
@@ -4564,7 +4565,8 @@ mlir::Value MLIRASTConsumer::CallMalloc(mlir::OpBuilder &builder,
   if (CStyleMemRef) {
     if (functions.find(name) == functions.end()) {
       auto funcType = fbuilder.getFunctionType(
-          types, mlir::MemRefType::get({ShapedType::kDynamic}, builder.getI8Type()));
+          types,
+          mlir::MemRefType::get({ShapedType::kDynamic}, builder.getI8Type()));
       functions[name] =
           fbuilder.create<mlir::func::FuncOp>(module->getLoc(), name, funcType);
     }
@@ -5624,7 +5626,8 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
         (!CStyleMemRef &&
          ET.isa<LLVM::LLVMPointerType, LLVM::LLVMArrayType,
                 LLVM::LLVMFunctionType, LLVM::LLVMStructType>()))
-      return LLVM::LLVMArrayType::get(ET, (size == ShapedType::kDynamic) ? 0 : size);
+      return LLVM::LLVMArrayType::get(
+          ET, (size == ShapedType::kDynamic) ? 0 : size);
     if (implicitRef)
       *implicitRef = true;
     return mlir::MemRefType::get({size}, ET);
@@ -5696,7 +5699,8 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
         return MT;
       else
         return MemRefType::get(
-            {ShapedType::kDynamic}, MT.cast<LLVM::LLVMPointerType>().getElementType());
+            {ShapedType::kDynamic},
+            MT.cast<LLVM::LLVMPointerType>().getElementType());
     }
     bool subRef = false;
     auto subType =
@@ -6000,7 +6004,8 @@ static bool parseMLIR(const char *Argv0, std::vector<std::string> filenames,
       return false;
 
     // Create TargetInfo for the other side of CUDA and OpenMP compilation.
-    if ((Clang->getLangOpts().CUDA || Clang->getLangOpts().OpenMPIsTargetDevice) &&
+    if ((Clang->getLangOpts().CUDA ||
+         Clang->getLangOpts().OpenMPIsTargetDevice) &&
         !Clang->getFrontendOpts().AuxTriple.empty()) {
       auto TO = std::make_shared<clang::TargetOptions>();
       TO->Triple = llvm::Triple::normalize(Clang->getFrontendOpts().AuxTriple);

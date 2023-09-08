@@ -59,10 +59,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/Program.h"
-#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/Program.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 #include <fstream>
 
 #include "polygeist/Dialect.h"
@@ -769,7 +769,8 @@ int main(int argc, char **argv) {
         noptPM2.addPass(mlir::polygeist::createPolygeistCanonicalizePass(
             canonicalizerConfig, {}, {}));
         if (LoopUnroll)
-          noptPM2.addPass(mlir::affine::createLoopUnrollPass(unrollSize, false, true));
+          noptPM2.addPass(
+              mlir::affine::createLoopUnrollPass(unrollSize, false, true));
         noptPM2.addPass(mlir::polygeist::createPolygeistCanonicalizePass(
             canonicalizerConfig, {}, {}));
         noptPM2.addPass(mlir::createCSEPass());
@@ -853,7 +854,8 @@ int main(int argc, char **argv) {
         optPM.addPass(mlir::polygeist::createPolygeistCanonicalizePass(
             canonicalizerConfig, {}, {}));
         if (LoopUnroll)
-          optPM.addPass(mlir::affine::createLoopUnrollPass(unrollSize, false, true));
+          optPM.addPass(
+              mlir::affine::createLoopUnrollPass(unrollSize, false, true));
         optPM.addPass(mlir::polygeist::createPolygeistCanonicalizePass(
             canonicalizerConfig, {}, {}));
         optPM.addPass(mlir::createCSEPass());
@@ -974,7 +976,8 @@ int main(int argc, char **argv) {
         pm2.addPass(mlir::polygeist::createPolygeistCanonicalizePass(
             canonicalizerConfig, {}, {}));
       }
-      pm.nest<mlir::func::FuncOp>().addPass(polygeist::createPolygeistMem2RegPass());
+      pm.nest<mlir::func::FuncOp>().addPass(
+          polygeist::createPolygeistMem2RegPass());
       pm2.addPass(mlir::createCSEPass());
       pm2.addPass(mlir::polygeist::createPolygeistCanonicalizePass(
           canonicalizerConfig, {}, {}));

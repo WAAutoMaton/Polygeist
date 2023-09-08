@@ -6,8 +6,8 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "polygeist/Passes/Passes.h"
@@ -173,7 +173,7 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
 
       rewriter.setInsertionPoint(mergedYieldOp);
       rewriter.create<affine::AffineYieldOp>(mergedYieldOp.getLoc(),
-                                     mergedYieldOp.getOperands());
+                                             mergedYieldOp.getOperands());
       rewriter.eraseOp(mergedYieldOp);
 
       rewriter.replaceOp(loop, affineLoop.getResults());
@@ -236,10 +236,11 @@ struct ParallelOpRaising : public OpRewritePattern<scf::ParallelOp> {
       bounds.push_back(AffineMap::get(
           /*dimCount=*/0, /*symbolCount=*/loop.getLowerBound().size(),
           builder.getAffineSymbolExpr(i)));
-    affine::AffineParallelOp affineLoop = rewriter.create<affine::AffineParallelOp>(
-        loop.getLoc(), loop.getResultTypes(), reductions, bounds,
-        loop.getLowerBound(), bounds, loop.getUpperBound(),
-        steps); //, loop.getInitVals());
+    affine::AffineParallelOp affineLoop =
+        rewriter.create<affine::AffineParallelOp>(
+            loop.getLoc(), loop.getResultTypes(), reductions, bounds,
+            loop.getLowerBound(), bounds, loop.getUpperBound(),
+            steps); //, loop.getInitVals());
 
     canonicalizeLoopBounds(rewriter, affineLoop);
 
@@ -264,7 +265,7 @@ struct ParallelOpRaising : public OpRewritePattern<scf::ParallelOp> {
 
     rewriter.setInsertionPoint(mergedYieldOp);
     rewriter.create<affine::AffineYieldOp>(mergedYieldOp.getLoc(),
-                                   mergedYieldOp.getOperands());
+                                           mergedYieldOp.getOperands());
     rewriter.eraseOp(mergedYieldOp);
 
     rewriter.replaceOp(loop, affineLoop.getResults());

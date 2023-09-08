@@ -7,8 +7,8 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -255,8 +255,8 @@ bool below(Value bval, int64_t val) {
       }
       return true;
     }
-    if (affine::AffineParallelOp afFor =
-            dyn_cast<affine::AffineParallelOp>(baval.getOwner()->getParentOp())) {
+    if (affine::AffineParallelOp afFor = dyn_cast<affine::AffineParallelOp>(
+            baval.getOwner()->getParentOp())) {
       for (auto ub :
            afFor.getUpperBoundMap(baval.getArgNumber()).getResults()) {
         if (!below(ub, afFor.getUpperBoundsMap().getNumDims(),
@@ -359,7 +359,7 @@ bool isSpeculatable(Operation *op) {
         return false;
   return true;
 }
-}
+} // namespace mlir::polygeist
 
 void moveParallelLoopInvariantCode(scf::ParallelOp looplike) {
 
@@ -523,7 +523,8 @@ void moveParallelLoopInvariantCode(affine::AffineParallelOp looplike) {
     if (!looplike.getResultTypes().empty()) {
       B.setInsertionPointToEnd(ifOp.getElseBlock());
       // TODO affine parallel initial value for reductions.
-      // B.create<affine::AffineYieldOp>(looplike.getLoc(), looplike.getIterOperands());
+      // B.create<affine::AffineYieldOp>(looplike.getLoc(),
+      // looplike.getIterOperands());
     }
   }
   for (auto op : opsToMove)
@@ -685,7 +686,8 @@ void moveSerialLoopInvariantCode(affine::AffineForOp looplike) {
     B.create<affine::AffineYieldOp>(looplike.getLoc(), looplike.getResults());
     if (!looplike.getResultTypes().empty()) {
       B.setInsertionPointToEnd(ifOp.getElseBlock());
-      B.create<affine::AffineYieldOp>(looplike.getLoc(), looplike.getIterOperands());
+      B.create<affine::AffineYieldOp>(looplike.getLoc(),
+                                      looplike.getIterOperands());
     }
   }
   for (auto op : opsToMove)
@@ -699,11 +701,13 @@ void ParallelLICM::runOnOperation() {
     moveLoopInvariantCode(loopLike);
     if (auto par = dyn_cast<scf::ParallelOp>((Operation *)loopLike)) {
       moveParallelLoopInvariantCode(par);
-    } else if (auto par = dyn_cast<affine::AffineParallelOp>((Operation *)loopLike)) {
+    } else if (auto par =
+                   dyn_cast<affine::AffineParallelOp>((Operation *)loopLike)) {
       moveParallelLoopInvariantCode(par);
     } else if (auto par = dyn_cast<scf::ForOp>((Operation *)loopLike)) {
       moveSerialLoopInvariantCode(par);
-    } else if (auto par = dyn_cast<affine::AffineForOp>((Operation *)loopLike)) {
+    } else if (auto par =
+                   dyn_cast<affine::AffineForOp>((Operation *)loopLike)) {
       moveSerialLoopInvariantCode(par);
     }
   });
