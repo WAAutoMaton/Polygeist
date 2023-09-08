@@ -167,6 +167,10 @@ private:
     return rs;
   }
 
+  LLVM::LLVMPointerType getOpaquePtr() {
+    return LLVM::LLVMPointerType::get(builder.getContext());
+  }
+
   mlir::Location getMLIRLocation(clang::SourceLocation loc);
 
   llvm::Type *getLLVMType(clang::QualType t);

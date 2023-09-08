@@ -197,6 +197,21 @@ def Memref2PointerOp : Polygeist_Op<"memref2pointer", [
   }];
 }
 
+def MemrefCastOp : Polygeist_Op<"memref_cast", [
+  ViewLikeOpInterface, Pure
+]> {
+  let summary = "Cast memrefs like c/c++ pointers";
+
+  let arguments = (ins AnyMemRef : $source);
+  let results = (outs AnyMemRef : $result);
+
+  //let hasFolder = 1;
+  //let hasCanonicalizer = 1;
+  let extraClassDeclaration = [{
+    ::mlir::Value getViewSource() { return getSource(); }
+  }];
+}
+
 def Pointer2MemrefOp : Polygeist_Op<"pointer2memref", [
   ViewLikeOpInterface, Pure
 ]> {

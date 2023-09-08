@@ -4873,8 +4873,7 @@ MLIRASTConsumer::GetOrCreateGlobal(const ValueDecl *FD, std::string prefix,
     initial_value = builder.getUnitAttr();
   }
 
-  switch (CGM.getLLVMLinkageVarDefinition(VD,
-                                          /*isConstant*/ false)) {
+  switch (CGM.getLLVMLinkageVarDefinition(VD)) {
   case llvm::GlobalValue::LinkageTypes::InternalLinkage:
     lnk = mlir::SymbolTable::Visibility::Private;
     break;
@@ -5970,7 +5969,6 @@ static bool parseMLIR(const char *Argv0, std::vector<std::string> filenames,
 
     const ArgStringList *args = &cmd->getArguments();
 
-    Clang->getInvocation().getCodeGenOpts().OpaquePointers = false;
     Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(), *args,
                                                  Diags);
     Clang->getInvocation().getFrontendOpts().DisableFree = false;

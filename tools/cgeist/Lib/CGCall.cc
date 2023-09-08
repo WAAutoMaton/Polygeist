@@ -383,7 +383,7 @@ mlir::Value MLIRScanner::getLLVM(Expr *E, bool isRef) {
     mlir::Value val = sub.val;
     if (auto mt = val.getType().dyn_cast<MemRefType>()) {
       val = builder.create<polygeist::Memref2PointerOp>(
-          loc, LLVM::LLVMPointerType::get(mt.getElementType()), val);
+          loc, getOpaquePtr());
     }
     return val;
   }
@@ -427,7 +427,7 @@ mlir::Value MLIRScanner::getLLVM(Expr *E, bool isRef) {
       abuilder.setInsertionPointToStart(allocationScope);
       auto one = abuilder.create<ConstantIntOp>(loc, 1, 64);
       auto alloc = abuilder.create<mlir::LLVM::AllocaOp>(
-          loc, LLVM::LLVMPointerType::get(sub.val.getType()), one, 0);
+          loc, LLVM::LLVMPointerType::get(builder.getContext()), one, 0);
       ValueCategory(alloc, /*isRef*/ true)
           .store(loc, builder, sub, /*isArray*/ isArray);
       sub = ValueCategory(alloc, /*isRef*/ true);
@@ -437,9 +437,7 @@ mlir::Value MLIRScanner::getLLVM(Expr *E, bool isRef) {
     ct = Glob.CGM.getContext().getLValueReferenceType(E->getType());
   }
   if (auto mt = val.getType().dyn_cast<MemRefType>()) {
-    auto nt = Glob.typeTranslator.translateType(anonymize(getLLVMType(ct)))
-                  .cast<LLVM::LLVMPointerType>();
-    val = builder.create<polygeist::Memref2PointerOp>(loc, nt, val);
+    val = builder.create<polygeist::Memref2PointerOp>(loc, LLVM::LLVMPointerType::get(builder.getContext()), val);
   }
   return val;
 }
