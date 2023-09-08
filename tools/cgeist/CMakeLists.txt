@@ -66,7 +66,6 @@ target_link_libraries(cgeist PRIVATE
   MLIRLLVMDialect
   MLIRNVVMDialect
   MLIROpenMPDialect
-  MLIRGPUOps
   MLIRGPUTransforms
   MLIRTransforms
   MLIRSCFToControlFlow

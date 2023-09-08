@@ -443,7 +443,7 @@ void MLIRScanner::init(mlir::func::FuncOp function, const FunctionDecl *fd) {
               builder.getI8Type(),
               src.getType().cast<LLVM::LLVMPointerType>().getAddressSpace()),
           src);
-      builder.create<LLVM::MemcpyOp>(loc, V, src, typeSize, false);
+      builder.create<LLVM::MemcpyOp>(loc, V, src, typeSize, /*isVolatile*/false);
     }
   }
 
@@ -2188,7 +2188,7 @@ ValueCategory MLIRScanner::VisitUnaryOperator(clang::UnaryOperator *U) {
     }
     auto ty = val.getType().cast<mlir::IntegerType>();
     auto c1 = builder.create<ConstantIntOp>(
-        loc, APInt::getAllOnesValue(ty.getWidth()).getSExtValue(), ty);
+        loc, APInt::getAllOnes(ty.getWidth()).getSExtValue(), ty);
     return ValueCategory(builder.create<XOrIOp>(loc, val, c1),
                          /*isReference*/ false);
   }
@@ -6000,7 +6000,7 @@ static bool parseMLIR(const char *Argv0, std::vector<std::string> filenames,
       return false;
 
     // Create TargetInfo for the other side of CUDA and OpenMP compilation.
-    if ((Clang->getLangOpts().CUDA || Clang->getLangOpts().OpenMPIsDevice) &&
+    if ((Clang->getLangOpts().CUDA || Clang->getLangOpts().OpenMPIsTargetDevice) &&
         !Clang->getFrontendOpts().AuxTriple.empty()) {
       auto TO = std::make_shared<clang::TargetOptions>();
       TO->Triple = llvm::Triple::normalize(Clang->getFrontendOpts().AuxTriple);

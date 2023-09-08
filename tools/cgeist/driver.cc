@@ -490,7 +490,6 @@ int main(int argc, char **argv) {
   }
   using namespace mlir;
 
-  MLIRArgs.push_back("-opaque-pointers=0");
   int size = MLIRArgs.size();
   const char **data = MLIRArgs.data();
   InitLLVM y(size, data);
