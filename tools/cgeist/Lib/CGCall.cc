@@ -383,7 +383,7 @@ mlir::Value MLIRScanner::getLLVM(Expr *E, bool isRef) {
     mlir::Value val = sub.val;
     if (auto mt = val.getType().dyn_cast<MemRefType>()) {
       val = builder.create<polygeist::Memref2PointerOp>(
-          loc, getOpaquePtr());
+          loc, getOpaquePtr(), val);
     }
     return val;
   }
@@ -1149,10 +1149,9 @@ ValueCategory MLIRScanner::VisitCallExpr(clang::CallExpr *expr) {
            sr->getDecl()->getName() == "__builtin_memmove")) {
         std::vector<mlir::Value> args = {
             getLLVM(expr->getArg(0)), getLLVM(expr->getArg(1)),
-            getLLVM(expr->getArg(2)), /*isVolatile*/
-            builder.create<ConstantIntOp>(loc, false, 1)};
+            getLLVM(expr->getArg(2))};
         builder.create<LLVM::MemmoveOp>(loc, args[0], args[1], args[2],
-                                        args[3]);
+                                       /*isVolatile*/ false);
         return ValueCategory(args[0], /*isReference*/ false);
       }
       if (sr->getDecl()->getIdentifier() &&
@@ -1160,11 +1159,10 @@ ValueCategory MLIRScanner::VisitCallExpr(clang::CallExpr *expr) {
            sr->getDecl()->getName() == "__builtin_memset")) {
         std::vector<mlir::Value> args = {
             getLLVM(expr->getArg(0)), getLLVM(expr->getArg(1)),
-            getLLVM(expr->getArg(2)), /*isVolatile*/
-            builder.create<ConstantIntOp>(loc, false, 1)};
+            getLLVM(expr->getArg(2))};
 
         args[1] = builder.create<TruncIOp>(loc, builder.getI8Type(), args[1]);
-        builder.create<LLVM::MemsetOp>(loc, args[0], args[1], args[2], args[3]);
+        builder.create<LLVM::MemsetOp>(loc, args[0], args[1], args[2],/*isVolatile*/ false);
         return ValueCategory(args[0], /*isReference*/ false);
       }
       if (sr->getDecl()->getIdentifier() &&
@@ -1172,9 +1170,8 @@ ValueCategory MLIRScanner::VisitCallExpr(clang::CallExpr *expr) {
            sr->getDecl()->getName() == "__builtin_memcpy")) {
         std::vector<mlir::Value> args = {
             getLLVM(expr->getArg(0)), getLLVM(expr->getArg(1)),
-            getLLVM(expr->getArg(2)), /*isVolatile*/
-            builder.create<ConstantIntOp>(loc, false, 1)};
-        builder.create<LLVM::MemcpyOp>(loc, args[0], args[1], args[2], args[3]);
+            getLLVM(expr->getArg(2))};
+        builder.create<LLVM::MemcpyOp>(loc, args[0], args[1], args[2], false);
         return ValueCategory(args[0], /*isReference*/ false);
       }
       // TODO this only sets a preference so it is not needed but if possible

@@ -443,8 +443,7 @@ void MLIRScanner::init(mlir::func::FuncOp function, const FunctionDecl *fd) {
               builder.getI8Type(),
               src.getType().cast<LLVM::LLVMPointerType>().getAddressSpace()),
           src);
-      mlir::Value volatileCpy = builder.create<ConstantIntOp>(loc, false, 1);
-      builder.create<LLVM::MemcpyOp>(loc, V, src, typeSize, volatileCpy);
+      builder.create<LLVM::MemcpyOp>(loc, V, src, typeSize, false);
     }
   }
 
@@ -4705,7 +4704,7 @@ MLIRASTConsumer::GetOrCreateLLVMGlobal(const ValueDecl *FD,
     FD->dump();
   VD = VD->getCanonicalDecl();
 
-  auto linkage = CGM.getLLVMLinkageVarDefinition(VD, /*isConstant*/ false);
+  auto linkage = CGM.getLLVMLinkageVarDefinition(VD);
   switch (linkage) {
   case llvm::GlobalValue::LinkageTypes::InternalLinkage:
     lnk = LLVM::Linkage::Internal;

@@ -71,6 +71,7 @@ target_link_libraries(cgeist PRIVATE
   MLIRTransforms
   MLIRSCFToControlFlow
   MLIRFuncToLLVM
+  MLIRFunctionInterfaces
   MLIRAffineTransforms
   MLIRAffineToStandard
   MLIRMathToLLVM
