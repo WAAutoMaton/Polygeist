@@ -42,7 +42,7 @@ static mlir::Value castCallerMemRefArg(mlir::Value callerArg,
       auto dstShape = dstTy.getShape();
 
       if (srcShape.size() == dstShape.size() && !srcShape.empty() &&
-          srcShape[0] == -1 &&
+          srcShape[0] == ShapedType::kDynamic &&
           std::equal(std::next(srcShape.begin()), srcShape.end(),
                      std::next(dstShape.begin()))) {
         b.setInsertionPointAfterValue(callerArg);
@@ -149,7 +149,7 @@ ValueCategory MLIRScanner::CallHelper(
         assert(shape.size() == 2);
 
         auto pshape = shape[0];
-        if (pshape == -1)
+        if (pshape == ShapedType::kDynamic)
           shape[0] = 1;
 
         OpBuilder abuilder(builder.getContext());
@@ -233,7 +233,7 @@ ValueCategory MLIRScanner::CallHelper(
     assert(shape.size() == 2);
 
     auto pshape = shape[0];
-    if (pshape == -1)
+    if (pshape == ShapedType::kDynamic)
       shape[0] = 1;
 
     OpBuilder abuilder(builder.getContext());
@@ -1266,7 +1266,7 @@ ValueCategory MLIRScanner::VisitCallExpr(clang::CallExpr *expr) {
                 // assert(!dstArray);
                 if (auto mt = dst.getType().dyn_cast<MemRefType>()) {
                   auto shape = std::vector<int64_t>(mt.getShape());
-                  shape[0] = -1;
+                  shape[0] = ShapedType::kDynamic;
                   auto mt0 = mlir::MemRefType::get(shape, mt.getElementType(),
                                                    MemRefLayoutAttrInterface(),
                                                    mt.getMemorySpace());
@@ -1296,7 +1296,7 @@ ValueCategory MLIRScanner::VisitCallExpr(clang::CallExpr *expr) {
                                                QualType(elem, 0)))
                               .cast<MemRefType>();
                 auto shape = std::vector<int64_t>(mt.getShape());
-                assert(shape.size() > 0 && shape.back() != -1);
+                assert(shape.size() > 0 && shape.back() != ShapedType::kDynamic);
                 auto affineOp = builder.create<scf::ForOp>(
                     loc, getConstantIndex(0), getConstantIndex(shape.back()),
                     getConstantIndex(1));
@@ -1309,7 +1309,7 @@ ValueCategory MLIRScanner::VisitCallExpr(clang::CallExpr *expr) {
                                            QualType(elem, 0)))
                           .cast<MemRefType>();
                   auto sshape = std::vector<int64_t>(smt.getShape());
-                  assert(sshape.size() > 0 && sshape.back() != -1);
+                  assert(sshape.size() > 0 && sshape.back() != ShapedType::kDynamic);
                   assert(sshape.back() == shape.back());
                   srcargs.push_back(affineOp.getInductionVar());
                 } else {
@@ -1326,7 +1326,7 @@ ValueCategory MLIRScanner::VisitCallExpr(clang::CallExpr *expr) {
                                            QualType(selem, 0)))
                           .cast<MemRefType>();
                   auto sshape = std::vector<int64_t>(smt.getShape());
-                  assert(sshape.size() > 0 && sshape.back() != -1);
+                  assert(sshape.size() > 0 && sshape.back() != ShapedType::kDynamic);
                   auto affineOp = builder.create<scf::ForOp>(
                       loc, getConstantIndex(0), getConstantIndex(sshape.back()),
                       getConstantIndex(1));

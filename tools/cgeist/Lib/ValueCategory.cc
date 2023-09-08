@@ -92,7 +92,7 @@ void ValueCategory::store(mlir::Location loc, mlir::OpBuilder &builder,
                         .getElementType()
                         .dyn_cast<mlir::MemRefType>()) {
         assert(MT.getShape().size() == 1);
-        assert(MT.getShape()[0] == -1);
+        assert(MT.getShape()[0] == ShapedType::kDynamic);
         assert(MT.getElementType() == PT.getElementType());
         toStore = builder.create<polygeist::Pointer2MemrefOp>(loc, MT, toStore);
       }

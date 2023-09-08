@@ -127,7 +127,7 @@ ValueCategory MLIRScanner::getComplexPartRef(mlir::Location loc,
     auto mt0 =
         mlir::MemRefType::get(shape, mt.getElementType(),
                               MemRefLayoutAttrInterface(), mt.getMemorySpace());
-    shape[0] = -1;
+    shape[0] = ShapedType::kDynamic;
     auto mt1 =
         mlir::MemRefType::get(shape, mt.getElementType(),
                               MemRefLayoutAttrInterface(), mt.getMemorySpace());
@@ -513,12 +513,12 @@ mlir::Value MLIRScanner::createAllocOp(mlir::Type t, VarDecl *name,
       alloc = abuilder.create<mlir::memref::AllocaOp>(varLoc, mr);
       if (memspace != 0) {
         alloc = abuilder.create<polygeist::Pointer2MemrefOp>(
-            varLoc, mlir::MemRefType::get(-1, t, {}, memspace),
+            varLoc, mlir::MemRefType::get(ShapedType::kDynamic, t, {}, memspace),
             abuilder.create<polygeist::Memref2PointerOp>(
                 varLoc, LLVM::LLVMPointerType::get(t, 0), alloc));
       }
       alloc = abuilder.create<mlir::memref::CastOp>(
-          varLoc, mlir::MemRefType::get(-1, t, {}, 0), alloc);
+          varLoc, mlir::MemRefType::get(ShapedType::kDynamic, t, {}, 0), alloc);
       if (t.isa<mlir::IntegerType, mlir::FloatType>() && memspace == 0) {
         mlir::Value idxs[] = {abuilder.create<ConstantIndexOp>(varLoc, 0)};
         abuilder.create<mlir::memref::StoreOp>(
@@ -534,7 +534,7 @@ mlir::Value MLIRScanner::createAllocOp(mlir::Type t, VarDecl *name,
     if (name)
       if (auto var = dyn_cast<VariableArrayType>(
               name->getType()->getUnqualifiedDesugaredType())) {
-        assert(shape[0] == -1);
+        assert(shape[0] == ShapedType::kDynamic);
         mr = mlir::MemRefType::get(
             shape, mt.getElementType(), MemRefLayoutAttrInterface(),
             wrapIntegerMemorySpace(memspace, mt.getContext()));
@@ -552,7 +552,7 @@ mlir::Value MLIRScanner::createAllocOp(mlir::Type t, VarDecl *name,
       }
 
     if (!alloc) {
-      if (pshape == -1)
+      if (pshape == ShapedType::kDynamic)
         shape[0] = 1;
       mr = mlir::MemRefType::get(
           shape, mt.getElementType(), MemRefLayoutAttrInterface(),
@@ -619,7 +619,7 @@ MLIRScanner::VisitExtVectorElementExpr(clang::ExtVectorElementExpr *expr) {
     auto shape = std::vector<int64_t>(mt.getShape());
 
     if (shape.size() == 1) {
-      shape[0] = -1;
+      shape[0] = ShapedType::kDynamic;
     } else {
       shape.erase(shape.begin());
     }
@@ -809,7 +809,7 @@ mlir::Attribute MLIRScanner::InitializeValueByInitListExpr(mlir::Value toInit,
         if (auto MT = toInit.getType().dyn_cast<MemRefType>()) {
           auto shape = MT.getShape();
           assert(shape.size() > 0);
-          assert(shape[0] != -1);
+          assert(shape[0] != ShapedType::kDynamic);
           num = shape[0];
         } else if (auto PT =
                        toInit.getType().dyn_cast<LLVM::LLVMPointerType>()) {
@@ -855,7 +855,7 @@ mlir::Attribute MLIRScanner::InitializeValueByInitListExpr(mlir::Value toInit,
         if (auto mt = toInit.getType().dyn_cast<MemRefType>()) {
           auto shape = std::vector<int64_t>(mt.getShape());
           assert(shape.size() > 0);
-          shape[0] = -1;
+          shape[0] = ShapedType::kDynamic;
           auto mt0 = mlir::MemRefType::get(shape, mt.getElementType(),
                                            MemRefLayoutAttrInterface(),
                                            mt.getMemorySpace());
@@ -1021,7 +1021,7 @@ ValueCategory MLIRScanner::VisitVarDecl(clang::VarDecl *decl) {
                                                 gv.first.getName());
       auto mt = gv.first.getType().cast<MemRefType>();
       auto shape = std::vector<int64_t>(mt.getShape());
-      shape[0] = -1;
+      shape[0] = ShapedType::kDynamic;
       op = abuilder.create<memref::CastOp>(
           varLoc,
           MemRefType::get(shape, mt.getElementType(),
@@ -1313,7 +1313,7 @@ ValueCategory MLIRScanner::VisitLambdaExpr(clang::LambdaExpr *expr) {
 
       if (auto mt = val.getType().dyn_cast<MemRefType>()) {
         auto shape = std::vector<int64_t>(mt.getShape());
-        shape[0] = -1;
+        shape[0] = ShapedType::kDynamic;
         val = builder.create<memref::CastOp>(
             loc,
             MemRefType::get(shape, mt.getElementType(),
@@ -1658,7 +1658,7 @@ ValueCategory MLIRScanner::CommonArrayToPointer(mlir::Location loc,
   // if (shape.size() > 1) {
   //  shape.erase(shape.begin());
   //} else {
-  shape[0] = -1;
+  shape[0] = ShapedType::kDynamic;
   //}
   auto mt0 =
       mlir::MemRefType::get(shape, mt.getElementType(),
@@ -1696,7 +1696,7 @@ ValueCategory MLIRScanner::CommonArrayLookup(mlir::Location loc,
   {
     auto mt = val.getType().cast<MemRefType>();
     auto shape = std::vector<int64_t>(mt.getShape());
-    shape[0] = -1;
+    shape[0] = ShapedType::kDynamic;
     auto mt0 =
         mlir::MemRefType::get(shape, mt.getElementType(),
                               MemRefLayoutAttrInterface(), mt.getMemorySpace());
@@ -1711,7 +1711,7 @@ ValueCategory MLIRScanner::CommonArrayLookup(mlir::Location loc,
   auto mt = dref.val.getType().cast<MemRefType>();
   auto shape = std::vector<int64_t>(mt.getShape());
   if (shape.size() == 1 || (shape.size() == 2 && isImplicitRefResult)) {
-    shape[0] = -1;
+    shape[0] = ShapedType::kDynamic;
   } else {
     shape.erase(shape.begin());
   }
@@ -2207,7 +2207,7 @@ ValueCategory MLIRScanner::VisitUnaryOperator(clang::UnaryOperator *U) {
     auto mt = sub.val.getType().cast<MemRefType>();
     auto shape = std::vector<int64_t>(mt.getShape());
     mlir::Value res;
-    shape[0] = -1;
+    shape[0] = ShapedType::kDynamic;
     auto mt0 =
         mlir::MemRefType::get(shape, mt.getElementType(),
                               MemRefLayoutAttrInterface(), mt.getMemorySpace());
@@ -2264,7 +2264,7 @@ ValueCategory MLIRScanner::VisitUnaryOperator(clang::UnaryOperator *U) {
               loc, APFloat(ft.getFloatSemantics(), "1"), ft));
     } else if (auto mt = ty.dyn_cast<MemRefType>()) {
       auto shape = std::vector<int64_t>(mt.getShape());
-      shape[0] = -1;
+      shape[0] = ShapedType::kDynamic;
       auto mt0 = mlir::MemRefType::get(shape, mt.getElementType(),
                                        MemRefLayoutAttrInterface(),
                                        mt.getMemorySpace());
@@ -2314,10 +2314,10 @@ ValueCategory MLIRScanner::VisitUnaryOperator(clang::UnaryOperator *U) {
       next = builder.create<LLVM::GEPOp>(
           loc, pt, prev,
           std::vector<mlir::Value>(
-              {builder.create<ConstantIntOp>(loc, -1, ity)}));
+              {builder.create<ConstantIntOp>(loc, ShapedType::kDynamic, ity)}));
     } else if (auto mt = ty.dyn_cast<MemRefType>()) {
       auto shape = std::vector<int64_t>(mt.getShape());
-      shape[0] = -1;
+      shape[0] = ShapedType::kDynamic;
       auto mt0 = mlir::MemRefType::get(shape, mt.getElementType(),
                                        MemRefLayoutAttrInterface(),
                                        mt.getMemorySpace());
@@ -2896,7 +2896,7 @@ ValueCategory MLIRScanner::VisitBinaryOperator(clang::BinaryOperator *BO) {
     auto emitSubindex = [&](auto mr, auto ptradd) {
       auto mt = mr.getType().template dyn_cast<mlir::MemRefType>();
       auto shape = std::vector<int64_t>(mt.getShape());
-      shape[0] = -1;
+      shape[0] = ShapedType::kDynamic;
       auto mt0 = mlir::MemRefType::get(shape, mt.getElementType(),
                                        MemRefLayoutAttrInterface(),
                                        mt.getMemorySpace());
@@ -3088,7 +3088,7 @@ ValueCategory MLIRScanner::VisitBinaryOperator(clang::BinaryOperator *BO) {
     } else if (auto postTy = prev.getType().dyn_cast<mlir::MemRefType>()) {
       mlir::Value rhsV = rhs.getValue(loc, builder);
       auto shape = std::vector<int64_t>(postTy.getShape());
-      shape[0] = -1;
+      shape[0] = ShapedType::kDynamic;
       postTy = mlir::MemRefType::get(shape, postTy.getElementType(),
                                      MemRefLayoutAttrInterface(),
                                      postTy.getMemorySpace());
@@ -3322,7 +3322,7 @@ ValueCategory MLIRScanner::CommonFieldLookup(mlir::Location loc,
       auto mt0 = mlir::MemRefType::get(shape, mt.getElementType(),
                                        MemRefLayoutAttrInterface(),
                                        mt.getMemorySpace());
-      shape[0] = -1;
+      shape[0] = ShapedType::kDynamic;
       auto mt1 = mlir::MemRefType::get(shape, mt.getElementType(),
                                        MemRefLayoutAttrInterface(),
                                        mt.getMemorySpace());
@@ -3463,7 +3463,7 @@ ValueCategory MLIRScanner::VisitDeclRefExpr(DeclRefExpr *E) {
     auto mt = gv.first.getType();
     auto gv2 = builder.create<memref::GetGlobalOp>(loc, mt, gv.first.getName());
     auto shape = std::vector<int64_t>(mt.getShape());
-    shape[0] = -1;
+    shape[0] = ShapedType::kDynamic;
     auto val = builder.create<memref::CastOp>(
         loc,
         MemRefType::get(shape, mt.getElementType(), MemRefLayoutAttrInterface(),
@@ -4310,7 +4310,7 @@ ValueCategory MLIRScanner::VisitCastExpr(CastExpr *E) {
       //nex.dump();
       assert(0);
     }
-    shape2[0] = -1;
+    shape2[0] = ShapedType::kDynamic;
     auto nex = mlir::MemRefType::get(shape2, mt.getElementType(),
                                      mt.getLayout(), mt.getMemorySpace());
     auto cst = builder.create<mlir::MemRefCastOp>(loc, scalar.val, nex);
@@ -4564,7 +4564,7 @@ mlir::Value MLIRASTConsumer::CallMalloc(mlir::OpBuilder &builder,
   if (CStyleMemRef) {
     if (functions.find(name) == functions.end()) {
       auto funcType = fbuilder.getFunctionType(
-          types, mlir::MemRefType::get({-1}, builder.getI8Type()));
+          types, mlir::MemRefType::get({ShapedType::kDynamic}, builder.getI8Type()));
       functions[name] =
           fbuilder.create<mlir::func::FuncOp>(module->getLoc(), name, funcType);
     }
@@ -4848,7 +4848,7 @@ MLIRASTConsumer::GetOrCreateGlobal(const ValueDecl *FD, std::string prefix,
       getMLIRType(CGM.getContext().getLValueReferenceType(FD->getType()))
           .cast<MemRefType>();
   std::vector<int64_t> shape(mr.getShape());
-  if (shape[0] == -1)
+  if (shape[0] == ShapedType::kDynamic)
     shape[0] = 1;
   mr = mlir::MemRefType::get(shape, mr.getElementType(),
                              MemRefLayoutAttrInterface(),
@@ -5463,7 +5463,7 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
       // If -memref-fullrank is unset or it cannot be fulfilled.
       auto mt = mlirty.dyn_cast<MemRefType>();
       auto shape2 = std::vector<int64_t>(mt.getShape());
-      shape2[0] = -1;
+      shape2[0] = ShapedType::kDynamic;
       return mlir::MemRefType::get(shape2, mt.getElementType(),
                                    MemRefLayoutAttrInterface(),
                                    mt.getMemorySpace());
@@ -5607,7 +5607,7 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
     }
     bool subRef = false;
     auto ET = getMLIRType(AT->getElementType(), &subRef, allowMerge);
-    int64_t size = -1;
+    int64_t size = ShapedType::kDynamic;
     if (auto CAT = dyn_cast<clang::ConstantArrayType>(AT))
       size = CAT->getSize().getZExtValue();
     if (memRefABI && subRef) {
@@ -5624,7 +5624,7 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
         (!CStyleMemRef &&
          ET.isa<LLVM::LLVMPointerType, LLVM::LLVMArrayType,
                 LLVM::LLVMFunctionType, LLVM::LLVMStructType>()))
-      return LLVM::LLVMArrayType::get(ET, (size == -1) ? 0 : size);
+      return LLVM::LLVMArrayType::get(ET, (size == ShapedType::kDynamic) ? 0 : size);
     if (implicitRef)
       *implicitRef = true;
     return mlir::MemRefType::get({size}, ET);
@@ -5677,7 +5677,7 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
   }
 
   if (isa<clang::PointerType, clang::ReferenceType>(t)) {
-    int64_t outer = (isa<clang::PointerType>(t)) ? -1 : -1;
+    int64_t outer = (isa<clang::PointerType>(t)) ? ShapedType::kDynamic : 1;
     auto PTT = isa<clang::PointerType>(t) ? cast<clang::PointerType>(t)
                                                 ->getPointeeType()
                                                 ->getUnqualifiedDesugaredType()
@@ -5696,7 +5696,7 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
         return MT;
       else
         return MemRefType::get(
-            {-1}, MT.cast<LLVM::LLVMPointerType>().getElementType());
+            {ShapedType::kDynamic}, MT.cast<LLVM::LLVMPointerType>().getElementType());
     }
     bool subRef = false;
     auto subType =
