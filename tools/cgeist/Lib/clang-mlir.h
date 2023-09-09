@@ -100,6 +100,11 @@ struct MLIRASTConsumer : public ASTConsumer {
 
   ~MLIRASTConsumer() {}
 
+  mlir::Type getVoidMemRefTy() const {
+    return MemRefType::get({ShapedType::kDynamic},
+                           mlir::OpBuilder(module->getContext()).getI8Type());
+  }
+
   mlir::func::FuncOp GetOrCreateMLIRFunction(const FunctionDecl *FD,
                                              bool getDeviceStub = false);
 

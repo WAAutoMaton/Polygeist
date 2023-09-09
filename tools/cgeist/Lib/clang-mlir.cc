@@ -5698,9 +5698,7 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
       if (!CStyleMemRef)
         return MT;
       else
-        return MemRefType::get(
-            {ShapedType::kDynamic},
-            MT.cast<LLVM::LLVMPointerType>().getElementType());
+        return getVoidMemRefTy();
     }
     bool subRef = false;
     auto subType =
