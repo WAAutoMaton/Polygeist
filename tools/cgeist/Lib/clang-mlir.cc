@@ -5680,7 +5680,7 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
   }
 
   if (isa<clang::PointerType, clang::ReferenceType>(t)) {
-    int64_t outer = (isa<clang::PointerType>(t)) ? ShapedType::kDynamic : 1;
+    int64_t outer = ShapedType::kDynamic;
     auto PTT = isa<clang::PointerType>(t) ? cast<clang::PointerType>(t)
                                                 ->getPointeeType()
                                                 ->getUnqualifiedDesugaredType()
