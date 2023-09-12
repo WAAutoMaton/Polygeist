@@ -62,8 +62,6 @@ int main(int argc, char **argv) {
   registry.insert<mlir::polygeist::PolygeistDialect>();
   registry.insert<DLTIDialect>();
 
-  registry.insert<mlir::polygeist::PolygeistDialect>();
-
   mlir::registerpolygeistPasses();
   mlir::func::registerInlinerExtension(registry);
 

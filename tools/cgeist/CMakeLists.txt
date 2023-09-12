@@ -82,6 +82,7 @@ target_link_libraries(cgeist PRIVATE
   MLIROpenMPToLLVMIRTranslation
   MLIRGPUToNVVMTransforms
   MLIRGPUToGPURuntimeTransforms
+  MLIRFuncAllExtensions
 
   clangAST
   clangBasic

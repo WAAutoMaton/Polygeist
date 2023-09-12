@@ -34,6 +34,7 @@
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
@@ -513,6 +514,7 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   mlir::registerOpenMPDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
+  mlir::func::registerInlinerExtension(registry);
   polygeist::registerGpuSerializeToCubinPass();
   polygeist::registerGpuSerializeToHsacoPass();
   MLIRContext context(registry);
