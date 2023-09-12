@@ -5414,6 +5414,47 @@ static void getConstantArrayShapeAndElemType(const clang::QualType &ty,
   elemTy = curTy;
 }
 
+// TODO memoize the results?
+static bool
+isRecursiveStructImpl(const clang::Type *t,
+                      SmallPtrSetImpl<const clang::RecordType *> &seen) {
+  if (auto PT = dyn_cast<clang::PointerType>(t)) {
+    return isRecursiveStructImpl(
+        PT->getPointeeType()->getUnqualifiedDesugaredType(), seen);
+  } else if (auto RT = dyn_cast<clang::ReferenceType>(t)) {
+    return isRecursiveStructImpl(
+        RT->getPointeeType()->getUnqualifiedDesugaredType(), seen);
+  } else if (auto RT = dyn_cast<clang::RecordType>(t)) {
+    if (seen.count(RT))
+      return true;
+    seen.insert(RT);
+
+    auto CXRD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+    if (CXRD) {
+      for (auto f : CXRD->bases()) {
+        auto baseTy = f.getType()->getUnqualifiedDesugaredType();
+        if (isRecursiveStructImpl(baseTy, seen))
+          return true;
+      }
+    }
+
+    for (auto f : RT->getDecl()->fields()) {
+      auto fieldTy = f->getType()->getUnqualifiedDesugaredType();
+      if (isRecursiveStructImpl(fieldTy, seen))
+        return true;
+    }
+
+    return false;
+  } else {
+    return false;
+  }
+}
+
+static bool isRecursiveStruct(const clang::RecordType *RT) {
+  SmallPtrSet<const clang::RecordType *, 4> seen;
+  return isRecursiveStructImpl(RT, seen);
+}
+
 mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
                                         bool allowMerge) {
   if (auto ET = dyn_cast<clang::ElaboratedType>(qt)) {
@@ -5504,11 +5545,7 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
 
     SmallPtrSet<llvm::Type *, 4> Seen;
     bool notAllSame = false;
-    bool recursive = false;
     for (size_t i = 0; i < ST->getNumElements(); i++) {
-      if (isRecursiveStruct(ST->getTypeAtIndex(i), ST, Seen)) {
-        recursive = true;
-      }
       if (ST->getTypeAtIndex(i) != ST->getTypeAtIndex(0U)) {
         notAllSame = true;
       }
@@ -5528,6 +5565,7 @@ mlir::Type MLIRASTConsumer::getMLIRType(clang::QualType qt, bool *implicitRef,
     allowMerge); return subT;
     }
     */
+    bool recursive = isRecursiveStruct(RT);
     if (recursive)
       typeCache[RT] = LLVM::LLVMStructType::getIdentified(
           module->getContext(), ("polygeist@mlir@" + ST->getName()).str());
