@@ -384,6 +384,9 @@ mlir::Value MLIRScanner::getLLVM(Expr *E, bool isRef) {
     if (auto mt = val.getType().dyn_cast<MemRefType>()) {
       val =
           builder.create<polygeist::Memref2PointerOp>(loc, getOpaquePtr(), val);
+    } else if (auto pt = val.getType().dyn_cast<LLVM::LLVMPointerType>()) {
+      if (!pt.isOpaque())
+        val = builder.create<LLVM::BitcastOp>(loc, getOpaquePtr(), val);
     }
     return val;
   }
@@ -437,8 +440,10 @@ mlir::Value MLIRScanner::getLLVM(Expr *E, bool isRef) {
     ct = Glob.CGM.getContext().getLValueReferenceType(E->getType());
   }
   if (auto mt = val.getType().dyn_cast<MemRefType>()) {
-    val = builder.create<polygeist::Memref2PointerOp>(
-        loc, LLVM::LLVMPointerType::get(builder.getContext()), val);
+    val = builder.create<polygeist::Memref2PointerOp>(loc, getOpaquePtr(), val);
+  } else if (auto pt = val.getType().dyn_cast<LLVM::LLVMPointerType>()) {
+    if (!pt.isOpaque())
+      val = builder.create<LLVM::BitcastOp>(loc, getOpaquePtr(), val);
   }
   return val;
 }
@@ -507,8 +512,8 @@ MLIRScanner::EmitClangBuiltinCallExpr(clang::CallExpr *expr) {
     if (toDelete.getType().isa<mlir::MemRefType>()) {
       builder.create<mlir::memref::DeallocOp>(loc, toDelete);
     } else {
-      mlir::Value args[1] = {builder.create<LLVM::BitcastOp>(
-          loc, LLVM::LLVMPointerType::get(builder.getI8Type()), toDelete)};
+      mlir::Value args[1] = {
+          builder.create<LLVM::BitcastOp>(loc, getOpaquePtr(), toDelete)};
       builder.create<mlir::LLVM::CallOp>(loc, Glob.GetOrCreateFreeFunction(),
                                          args);
     }

@@ -243,7 +243,7 @@ struct Memref2PointerOpLowering
     auto space0 = op.getSource().getType().getMemorySpaceAsInt();
     if (transformed.getSource().getType().isa<LLVM::LLVMPointerType>()) {
       mlir::Value ptr = rewriter.create<LLVM::BitcastOp>(
-          loc, LLVM::LLVMPointerType::get(LPT.getElementType(), space0),
+          loc, LLVM::LLVMPointerType::get(op.getContext(), space0),
           transformed.getSource());
       if (space0 != LPT.getAddressSpace())
         ptr = rewriter.create<LLVM::AddrSpaceCastOp>(loc, LPT, ptr);
@@ -262,7 +262,7 @@ struct Memref2PointerOpLowering
     Value idxs[] = {baseOffset};
     ptr = rewriter.create<LLVM::GEPOp>(loc, ptr.getType(), ptr, idxs);
     ptr = rewriter.create<LLVM::BitcastOp>(
-        loc, LLVM::LLVMPointerType::get(LPT.getElementType(), space0), ptr);
+        loc, LLVM::LLVMPointerType::get(op.getContext(), space0), ptr);
     if (space0 != LPT.getAddressSpace())
       ptr = rewriter.create<LLVM::AddrSpaceCastOp>(loc, LPT, ptr);
 
@@ -988,10 +988,9 @@ public:
                                   innerSizes));
     }
     Value null = rewriter.create<LLVM::NullOp>(loc, convertedType);
-    auto next =
-        rewriter.create<LLVM::GEPOp>(loc, convertedType, null, LLVM::GEPArg(1));
-    Value elementSize =
-        rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), next);
+    Value elementSize = rewriter.create<polygeist::TypeSizeOp>(
+        loc, rewriter.getIndexType(),
+        mlir::TypeAttr::get(originalType.getElementType()));
     Value size = rewriter.create<LLVM::MulOp>(loc, totalSize, elementSize);
 
     if (auto F = module.lookupSymbol<mlir::func::FuncOp>("malloc")) {
@@ -2748,7 +2747,7 @@ struct ConvertPolygeistToLLVMPass
           return Type();
 
         if (type.getRank() == 0) {
-          return LLVM::LLVMPointerType::get(converted,
+          return LLVM::LLVMPointerType::get(type.getContext(),
                                             type.getMemorySpaceAsInt());
         }
 
@@ -2766,7 +2765,7 @@ struct ConvertPolygeistToLLVMPass
           for (int64_t size : llvm::reverse(type.getShape().drop_front()))
             converted = LLVM::LLVMArrayType::get(converted, size);
         }
-        return LLVM::LLVMPointerType::get(converted,
+        return LLVM::LLVMPointerType::get(type.getContext(),
                                           type.getMemorySpaceAsInt());
       });
     }

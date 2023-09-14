@@ -1373,8 +1373,8 @@ ValueCategory MLIRScanner::VisitCXXDeleteExpr(clang::CXXDeleteExpr *expr) {
   if (toDelete.getType().isa<mlir::MemRefType>()) {
     builder.create<mlir::memref::DeallocOp>(loc, toDelete);
   } else {
-    mlir::Value args[1] = {builder.create<LLVM::BitcastOp>(
-        loc, LLVM::LLVMPointerType::get(builder.getI8Type()), toDelete)};
+    mlir::Value args[1] = {
+        builder.create<LLVM::BitcastOp>(loc, getOpaquePtr(), toDelete)};
     builder.create<mlir::LLVM::CallOp>(loc, Glob.GetOrCreateFreeFunction(),
                                        args);
   }
@@ -1907,8 +1907,8 @@ MLIRScanner::EmitGPUCallExpr(clang::CallExpr *expr) {
         if (arg.getType().isa<mlir::LLVM::LLVMPointerType>()) {
           auto callee = EmitCallee(expr->getCallee());
           auto strcmpF = Glob.GetOrCreateLLVMFunction(callee);
-          mlir::Value args[] = {builder.create<LLVM::BitcastOp>(
-              loc, LLVM::LLVMPointerType::get(builder.getIntegerType(8)), arg)};
+          mlir::Value args[] = {
+              builder.create<LLVM::BitcastOp>(loc, getOpaquePtr(), arg)};
           builder.create<mlir::LLVM::CallOp>(loc, strcmpF, args);
         } else {
           assert(arg.getType().isa<MemRefType>());
