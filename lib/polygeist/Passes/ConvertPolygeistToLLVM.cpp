@@ -1173,9 +1173,19 @@ protected:
 
     SmallVector<LLVM::GEPArg> args = llvm::to_vector(llvm::map_range(
         adaptor.getIndices(), [](Value v) { return LLVM::GEPArg(v); }));
-    return rewriter.create<LLVM::GEPOp>(
-        loc, this->getElementPtrType(originalType), convertedType,
-        adaptor.getMemref(), args);
+    if (adaptor.getMemref()
+            .getType()
+            .template cast<LLVM::LLVMPointerType>()
+            .isOpaque())
+      return rewriter.create<LLVM::GEPOp>(
+          loc,
+          LLVM::LLVMPointerType::get(op.getContext(),
+                                     originalType.getMemorySpaceAsInt()),
+          originalType.getElementType(), adaptor.getMemref(), args);
+    else
+      return rewriter.create<LLVM::GEPOp>(loc,
+                                          this->getElementPtrType(originalType),
+                                          adaptor.getMemref(), args);
   }
 };
 
