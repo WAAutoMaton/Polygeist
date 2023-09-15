@@ -46,7 +46,6 @@ using namespace clang::driver;
 using namespace llvm::opt;
 using namespace mlir;
 using namespace mlir::arith;
-using namespace mlir::func;
 using namespace mlirclang;
 
 #define DEBUG_TYPE "clang-mlir"
@@ -287,7 +286,7 @@ void MLIRScanner::init(mlir::func::FuncOp function, const FunctionDecl *fd) {
     auto deviceStub =
         Glob.GetOrCreateMLIRFunction(fd, /* getDeviceStub */ true);
     builder.create<func::CallOp>(loc, deviceStub, function.getArguments());
-    builder.create<ReturnOp>(loc);
+    builder.create<func::ReturnOp>(loc);
     return;
   }
 
@@ -463,9 +462,9 @@ void MLIRScanner::init(mlir::func::FuncOp function, const FunctionDecl *fd) {
   if (function.getFunctionType().getResults().size()) {
     mlir::Value vals[1] = {
         builder.create<mlir::memref::LoadOp>(loc, returnVal)};
-    builder.create<ReturnOp>(loc, vals);
+    builder.create<func::ReturnOp>(loc, vals);
   } else
-    builder.create<ReturnOp>(loc);
+    builder.create<func::ReturnOp>(loc);
 
   assert(function->getParentOp() == Glob.module.get() &&
          "New function must be inserted into global module");
@@ -4579,8 +4578,7 @@ mlir::Value MLIRASTConsumer::CallMalloc(mlir::OpBuilder &builder,
 
     if (llvmFunctions.find(name) == llvmFunctions.end()) {
       auto llvmFnType = LLVM::LLVMFunctionType::get(
-          LLVM::LLVMPointerType::get(mlir::IntegerType::get(ctx, 8)), types,
-          false);
+          LLVM::LLVMPointerType::get(builder.getContext()), types, false);
       LLVM::Linkage lnk = LLVM::Linkage::External;
       llvmFunctions[name] = fbuilder.create<LLVM::LLVMFuncOp>(
           module->getLoc(), name, llvmFnType, lnk);
@@ -4599,8 +4597,7 @@ mlir::LLVM::LLVMFuncOp MLIRASTConsumer::GetOrCreateFreeFunction() {
     return llvmFunctions[name];
   }
   auto ctx = module->getContext();
-  mlir::Type types[] = {
-      LLVM::LLVMPointerType::get(mlir::IntegerType::get(ctx, 8))};
+  mlir::Type types[] = {LLVM::LLVMPointerType::get(ctx)};
   auto llvmFnType =
       LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx), types, false);
 

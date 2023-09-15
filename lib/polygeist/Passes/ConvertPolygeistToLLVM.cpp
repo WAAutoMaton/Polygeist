@@ -788,8 +788,8 @@ struct AsyncOpLowering : public ConvertOpToLLVMPattern<async::ExecuteOp> {
             loc, rewriter.getI64Type(),
             rewriter.create<polygeist::TypeSizeOp>(loc, rewriter.getIndexType(),
                                                    ST));
-        auto mallocFunc = LLVM::lookupOrCreateMallocFn(
-            module, getIndexType(), /*opaquePointers=*/false);
+        auto mallocFunc = LLVM::lookupOrCreateMallocFn(module, getIndexType(),
+                                                       /*opaquePointers=*/true);
         mlir::Value alloc =
             rewriter.create<LLVM::CallOp>(loc, mallocFunc, arg).getResult();
         alloc = rewriter.create<LLVM::BitcastOp>(
@@ -1002,9 +1002,9 @@ public:
       LLVM::LLVMFuncOp mallocFunc =
           getTypeConverter()->getOptions().useGenericFunctions
               ? LLVM::lookupOrCreateGenericAllocFn(module, getIndexType(),
-                                                   /*opaquePointers=*/false)
+                                                   /*opaquePointers=*/true)
               : LLVM::lookupOrCreateMallocFn(module, getIndexType(),
-                                             /*opaquePointers=*/false);
+                                             /*opaquePointers=*/true);
       Value allocated =
           rewriter.create<LLVM::CallOp>(loc, mallocFunc, size).getResult();
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(allocOp, convertedType,
@@ -1032,8 +1032,8 @@ public:
       LLVM::LLVMFuncOp freeFunc =
           getTypeConverter()->getOptions().useGenericFunctions
               ? LLVM::lookupOrCreateGenericFreeFn(module,
-                                                  /*opaquePointers*/ false)
-              : LLVM::lookupOrCreateFreeFn(module, /*opaquePointers*/ false);
+                                                  /*opaquePointers*/ true)
+              : LLVM::lookupOrCreateFreeFn(module, /*opaquePointers*/ true);
       rewriter.replaceOpWithNewOp<LLVM::CallOp>(deallocOp, freeFunc,
                                                 adaptor.getMemref());
     }
@@ -1778,7 +1778,7 @@ struct LowerGPUAlternativesOp
       static int num = 0;
       auto kernelId = LLVM::createGlobalString(
           loc, rewriter, std::string("kernelId.") + std::to_string(num++),
-          locStr, LLVM::Linkage::Internal, /*opaquePointers*/ false);
+          locStr, LLVM::Linkage::Internal, /*opaquePointers*/ true);
       auto totalAlternatives = rewriter.create<LLVM::ConstantOp>(
           loc, llvmInt32Type, gao->getNumRegions());
       auto alternative =
@@ -1952,7 +1952,7 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateKernelNameConstant(
       std::string(llvm::formatv("{0}_{1}_kernel_name", moduleName, name));
   return LLVM::createGlobalString(
       loc, builder, globalName, StringRef(kernelName.data(), kernelName.size()),
-      LLVM::Linkage::Internal, /*opaquePointers*/ false);
+      LLVM::Linkage::Internal, /*opaquePointers*/ true);
 }
 
 // Returns whether all operands are of LLVM type.
@@ -2132,7 +2132,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
         // data.setSectionAttr(moduleBuilder.getStringAttr(fatbinSectionName));
         Value data = LLVM::createGlobalString(
             loc, globalBuilder, nameBuffer.str(), binaryAttr.getValue(),
-            LLVM::Linkage::Internal, /*opaquePointers*/ false);
+            LLVM::Linkage::Internal, /*opaquePointers*/ true);
         constructedStruct = globalBuilder.create<LLVM::InsertValueOp>(
             loc, fatBinWrapperType, constructedStruct, data,
             globalBuilder.getDenseI64ArrayAttr(i++));
@@ -2210,7 +2210,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
             return LLVM::createGlobalString(
                 loc, ctorBuilder, globalName,
                 StringRef(sname.data(), sname.size()), LLVM::Linkage::Internal,
-                /*opaquePointers*/ false);
+                /*opaquePointers*/ true);
           }();
           // TODO could this be a memref global op?
           auto stub = moduleOp.lookupSymbol<LLVM::GlobalOp>(g.getName());
