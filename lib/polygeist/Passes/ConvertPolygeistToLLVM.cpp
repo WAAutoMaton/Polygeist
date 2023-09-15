@@ -1157,25 +1157,23 @@ public:
   matchAndRewrite(memref::GetGlobalOp getGlobalOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType originalType = getGlobalOp.getType();
-    Type convertedType =
-        convertGlobalMemRefTypeToLLVM(originalType, *typeConverter);
+    Type convertedType = getTypeConverter()->convertType(originalType);
+    assert(convertedType.cast<LLVM::LLVMPointerType>().isOpaque());
     Value wholeAddress = rewriter.create<LLVM::AddressOfOp>(
-        getGlobalOp->getLoc(),
-        LLVM::LLVMPointerType::get(convertedType,
-                                   originalType.getMemorySpaceAsInt()),
-        getGlobalOp.getName());
+        getGlobalOp->getLoc(), convertedType, getGlobalOp.getName());
 
     if (originalType.getRank() == 0) {
       rewriter.replaceOp(getGlobalOp, wholeAddress);
       return success();
     }
 
+    auto elTy = convertMemrefElementTypeForLLVMPointer(
+        originalType, *this->getTypeConverter());
     rewriter.replaceOpWithNewOp<LLVM::GEPOp>(
         getGlobalOp,
-        LLVM::LLVMPointerType::get(
-            convertedType.cast<LLVM::LLVMArrayType>().getElementType(),
-            originalType.getMemorySpaceAsInt()),
-        wholeAddress, SmallVector<LLVM::GEPArg>(/*Size=*/2, /*Value=*/0));
+        LLVM::LLVMPointerType::get(originalType.getContext(),
+                                   originalType.getMemorySpaceAsInt()),
+        elTy, wholeAddress, SmallVector<LLVM::GEPArg>(/*Size=*/2, /*Value=*/0));
     return success();
   }
 };
