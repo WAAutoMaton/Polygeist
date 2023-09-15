@@ -52,7 +52,7 @@
 // TODO use this library if possible, crashes for some reason
 #include <nvPTXCompiler.h>
 
-#define DEBUG_TYPE "serialize-to-cubin"
+#define DEBUG_TYPE "polygeist-serialize-to-cubin"
 
 using namespace mlir;
 
@@ -99,7 +99,7 @@ public:
                        std::string libDevicePath = "",
                        bool outputIntermediate = false);
 
-  StringRef getArgument() const override { return "gpu-to-cubin"; }
+  StringRef getArgument() const override { return "polygeist-gpu-to-cubin"; }
   StringRef getDescription() const override {
     return "Lower GPU kernel function to CUBIN binary annotations";
   }

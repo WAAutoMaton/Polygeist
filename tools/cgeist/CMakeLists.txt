@@ -83,6 +83,21 @@ target_link_libraries(cgeist PRIVATE
   MLIRGPUToNVVMTransforms
   MLIRGPUToGPURuntimeTransforms
   MLIRFuncAllExtensions
+  MLIRLLVMIRToLLVMTranslation
+  MLIRFromLLVMIRTranslationRegistration
+  MLIRAffineAnalysis
+  MLIRAnalysis
+  MLIRCastInterfaces
+  MLIRDialect
+  MLIROptLib
+  MLIRParser
+  MLIRPass
+  MLIRTransforms
+  MLIRTransformUtils
+  MLIRSupport
+  MLIRIR
+  MLIRCAPIRegisterEverything
+  MLIRBuiltinToLLVMIRTranslation
 
   clangAST
   clangBasic

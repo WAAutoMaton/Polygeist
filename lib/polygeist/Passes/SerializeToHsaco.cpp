@@ -56,7 +56,7 @@
 
 #include <mutex>
 
-#define DEBUG_TYPE "serialize-to-hsaco"
+#define DEBUG_TYPE "polygeist-serialize-to-hsaco"
 
 using namespace mlir;
 
@@ -71,7 +71,7 @@ public:
                        std::string rocmPath = "/opt/rocm",
                        bool outputIntermediate = false);
 
-  StringRef getArgument() const override { return "gpu-to-hsaco"; }
+  StringRef getArgument() const override { return "polygeist-gpu-to-hsaco"; }
   StringRef getDescription() const override {
     return "Lower GPU kernel function to HSACO binary annotations";
   }

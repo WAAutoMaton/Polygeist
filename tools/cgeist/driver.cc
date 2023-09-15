@@ -47,7 +47,13 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/InitAllDialects.h"
+#include "mlir/InitAllExtensions.h"
+#include "mlir/InitAllPasses.h"
+#include "mlir/InitAllTranslations.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Dialect/All.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -511,12 +517,18 @@ int main(int argc, char **argv) {
     }
   }
 
+  mlir::registerAllPasses();
+  mlir::registerAllTranslations();
   mlir::DialectRegistry registry;
   mlir::registerOpenMPDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
   mlir::func::registerInlinerExtension(registry);
   polygeist::registerGpuSerializeToCubinPass();
   polygeist::registerGpuSerializeToHsacoPass();
+  mlir::registerAllDialects(registry);
+  mlir::registerAllExtensions(registry);
+  mlir::registerAllFromLLVMIRTranslations(registry);
+  mlir::registerBuiltinDialectTranslation(registry);
   MLIRContext context(registry);
 
   context.disableMultithreading();
