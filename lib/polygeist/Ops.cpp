@@ -1569,8 +1569,14 @@ public:
     auto PET = op.getType().cast<LLVM::LLVMPointerType>().getElementType();
     auto MET = src.getSource().getType().cast<MemRefType>().getElementType();
     if (PET != MET) {
-      auto ps = rewriter.create<polygeist::TypeSizeOp>(
-          op.getLoc(), rewriter.getIndexType(), mlir::TypeAttr::get(PET));
+      Value ps;
+      if (PET)
+        // non-opaque pointer
+        ps = rewriter.create<polygeist::TypeSizeOp>(
+            op.getLoc(), rewriter.getIndexType(), mlir::TypeAttr::get(PET));
+      else
+        // opaque pointer
+        ps = rewriter.create<arith::ConstantIndexOp>(op.getLoc(), 1);
       auto ms = rewriter.create<polygeist::TypeSizeOp>(
           op.getLoc(), rewriter.getIndexType(), mlir::TypeAttr::get(MET));
       idx[0] = rewriter.create<MulIOp>(op.getLoc(), idx[0], ms);
@@ -1578,11 +1584,20 @@ public:
     }
     idx[0] = rewriter.create<arith::IndexCastOp>(op.getLoc(),
                                                  rewriter.getI64Type(), idx[0]);
-    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(
-        op, op.getType(),
-        rewriter.create<Memref2PointerOp>(op.getLoc(), op.getType(),
-                                          src.getSource()),
-        idx);
+    if (PET)
+      // non-opaque pointer
+      rewriter.replaceOpWithNewOp<LLVM::GEPOp>(
+          op, op.getType(),
+          rewriter.create<Memref2PointerOp>(op.getLoc(), op.getType(),
+                                            src.getSource()),
+          idx);
+    else
+      // opaque pointer
+      rewriter.replaceOpWithNewOp<LLVM::GEPOp>(
+          op, op.getType(), rewriter.getI8Type(),
+          rewriter.create<Memref2PointerOp>(op.getLoc(), op.getType(),
+                                            src.getSource()),
+          idx);
     return success();
   }
 };
