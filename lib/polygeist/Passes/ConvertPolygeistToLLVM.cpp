@@ -1207,19 +1207,11 @@ protected:
       (void)rewriter.notifyMatchFailure(loc, "unsupported memref type");
       return nullptr;
     }
-    if (adaptor.getMemref()
-            .getType()
-            .template cast<LLVM::LLVMPointerType>()
-            .isOpaque())
-      return rewriter.create<LLVM::GEPOp>(
-          loc,
-          LLVM::LLVMPointerType::get(op.getContext(),
-                                     originalType.getMemorySpaceAsInt()),
-          *elTy, adaptor.getMemref(), args);
-    else
-      return rewriter.create<LLVM::GEPOp>(loc,
-                                          this->getElementPtrType(originalType),
-                                          adaptor.getMemref(), args);
+    return rewriter.create<LLVM::GEPOp>(
+        loc,
+        LLVM::LLVMPointerType::get(op.getContext(),
+                                   originalType.getMemorySpaceAsInt()),
+        *elTy, adaptor.getMemref(), args);
   }
 };
 
