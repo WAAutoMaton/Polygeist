@@ -118,6 +118,34 @@ extern llvm::cl::opt<PolygeistAlternativesMode> PolygeistAlternativesMode;
 
 mlir::LLVM::LLVMFuncOp GetOrCreateFreeFunction(ModuleOp module);
 
+std::optional<Type>
+convertMemrefElementTypeForLLVMPointer(MemRefType type,
+                                       const LLVMTypeConverter &converter) {
+  Type converted = converter.convertType(type.getElementType());
+  if (!converted)
+    return Type();
+
+  if (type.getRank() == 0) {
+    return converted;
+  }
+
+  // Only the leading dimension can be dynamic.
+  if (llvm::any_of(type.getShape().drop_front(), ShapedType::isDynamic))
+    return Type();
+
+  // Only identity layout is supported.
+  // TODO: detect the strided layout that is equivalent to identity
+  // given the static part of the shape.
+  if (!type.getLayout().isIdentity())
+    return Type();
+
+  if (type.getRank() > 0) {
+    for (int64_t size : llvm::reverse(type.getShape().drop_front()))
+      converted = LLVM::LLVMArrayType::get(converted, size);
+  }
+  return converted;
+}
+
 struct UndefLowering : public ConvertOpToLLVMPattern<UndefOp> {
   using ConvertOpToLLVMPattern<UndefOp>::ConvertOpToLLVMPattern;
 
@@ -1173,6 +1201,12 @@ protected:
 
     SmallVector<LLVM::GEPArg> args = llvm::to_vector(llvm::map_range(
         adaptor.getIndices(), [](Value v) { return LLVM::GEPArg(v); }));
+    auto elTy = convertMemrefElementTypeForLLVMPointer(
+        originalType, *this->getTypeConverter());
+    if (!elTy) {
+      (void)rewriter.notifyMatchFailure(loc, "unsupported memref type");
+      return nullptr;
+    }
     if (adaptor.getMemref()
             .getType()
             .template cast<LLVM::LLVMPointerType>()
@@ -1181,7 +1215,7 @@ protected:
           loc,
           LLVM::LLVMPointerType::get(op.getContext(),
                                      originalType.getMemorySpaceAsInt()),
-          originalType.getElementType(), adaptor.getMemref(), args);
+          *elTy, adaptor.getMemref(), args);
     else
       return rewriter.create<LLVM::GEPOp>(loc,
                                           this->getElementPtrType(originalType),
@@ -2752,29 +2786,9 @@ struct ConvertPolygeistToLLVMPass
     LLVMTypeConverter converter(&getContext(), options, &dataLayoutAnalysis);
     if (useCStyleMemRef) {
       converter.addConversion([&](MemRefType type) -> std::optional<Type> {
-        Type converted = converter.convertType(type.getElementType());
-        if (!converted)
+        auto elTy = convertMemrefElementTypeForLLVMPointer(type, converter);
+        if (!elTy)
           return Type();
-
-        if (type.getRank() == 0) {
-          return LLVM::LLVMPointerType::get(type.getContext(),
-                                            type.getMemorySpaceAsInt());
-        }
-
-        // Only the leading dimension can be dynamic.
-        if (llvm::any_of(type.getShape().drop_front(), ShapedType::isDynamic))
-          return Type();
-
-        // Only identity layout is supported.
-        // TODO: detect the strided layout that is equivalent to identity
-        // given the static part of the shape.
-        if (!type.getLayout().isIdentity())
-          return Type();
-
-        if (type.getRank() > 0) {
-          for (int64_t size : llvm::reverse(type.getShape().drop_front()))
-            converted = LLVM::LLVMArrayType::get(converted, size);
-        }
         return LLVM::LLVMPointerType::get(type.getContext(),
                                           type.getMemorySpaceAsInt());
       });
