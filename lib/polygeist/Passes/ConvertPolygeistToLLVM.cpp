@@ -118,9 +118,8 @@ extern llvm::cl::opt<PolygeistAlternativesMode> PolygeistAlternativesMode;
 
 mlir::LLVM::LLVMFuncOp GetOrCreateFreeFunction(ModuleOp module);
 
-std::optional<Type>
-convertMemrefElementTypeForLLVMPointer(MemRefType type,
-                                       const LLVMTypeConverter &converter) {
+Type convertMemrefElementTypeForLLVMPointer(
+    MemRefType type, const LLVMTypeConverter &converter) {
   Type converted = converter.convertType(type.getElementType());
   if (!converted)
     return Type();
@@ -972,7 +971,9 @@ public:
     auto convertedType = getTypeConverter()
                              ->convertType(originalType)
                              .dyn_cast_or_null<LLVM::LLVMPointerType>();
-    if (!convertedType)
+    auto elTy = convertMemrefElementTypeForLLVMPointer(
+        originalType, *this->getTypeConverter());
+    if (!convertedType || !elTy)
       return rewriter.notifyMatchFailure(loc, "unsupported memref type");
 
     assert(adaptor.getDynamicSizes().size() <= 1 &&
@@ -980,7 +981,8 @@ public:
 
     Value outerSize = getOuterSize(allocaOp, adaptor, rewriter);
     rewriter.replaceOpWithNewOp<LLVM::AllocaOp>(
-        allocaOp, convertedType, outerSize, adaptor.getAlignment().value_or(0));
+        allocaOp, convertedType, elTy, outerSize,
+        adaptor.getAlignment().value_or(0));
     return success();
   }
 };
@@ -1211,7 +1213,7 @@ protected:
         loc,
         LLVM::LLVMPointerType::get(op.getContext(),
                                    originalType.getMemorySpaceAsInt()),
-        *elTy, adaptor.getMemref(), args);
+        elTy, adaptor.getMemref(), args);
   }
 };
 
